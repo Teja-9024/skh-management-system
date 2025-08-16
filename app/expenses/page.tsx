@@ -1,0 +1,250 @@
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+
+interface ExpenseData {
+  date: string
+  expenseType: string
+  amount: number
+  paymentType: string
+  expenseCategory: string
+  remarks: string
+}
+
+export default function ShopExpenses() {
+  const [formData, setFormData] = useState<ExpenseData>({
+    date: new Date().toISOString().split("T")[0],
+    expenseType: "",
+    amount: 0,
+    paymentType: "Cash",
+    expenseCategory: "Electricity",
+    remarks: "",
+  })
+
+  const [expenses, setExpenses] = useState<(ExpenseData & { id: string })[]>([])
+
+  const paymentTypes = ["Cash", "Card", "UPI", "Bank Transfer", "Cheque"]
+  const expenseCategories = [
+    "Rent",
+    "Electricity",
+    "Water",
+    "Internet",
+    "Phone",
+    "Transportation",
+    "Office Supplies",
+    "Marketing",
+    "Maintenance",
+    "Insurance",
+    "Other",
+  ]
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.expenseType.trim()) {
+      alert("Please enter expense type")
+      return
+    }
+
+    if (formData.amount <= 0) {
+      alert("Please enter a valid amount")
+      return
+    }
+
+    const newExpense = {
+      ...formData,
+      id: Date.now().toString(),
+    }
+
+    setExpenses((prev) => [newExpense, ...prev])
+
+    // Reset form
+    setFormData({
+      date: new Date().toISOString().split("T")[0],
+      expenseType: "",
+      amount: 0,
+      paymentType: "Cash",
+      expenseCategory: "Electricity",
+      remarks: "",
+    })
+
+    alert("Expense saved successfully!")
+  }
+
+  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-gray-800">Shop Expenses</h2>
+        <p className="text-gray-600">Log all operational expenses</p>
+      </div>
+
+      {expenses.length > 0 && (
+        <div className="mb-6 bg-white rounded-lg card-shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+              <p className="text-2xl font-bold text-red-600">₹{totalExpenses.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-red-600 text-xl">💸</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg card-shadow p-6">
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+              <input
+                type="date"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                value={formData.date}
+                onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Expense Type</label>
+              <input
+                type="text"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                value={formData.expenseType}
+                onChange={(e) => setFormData((prev) => ({ ...prev, expenseType: e.target.value }))}
+                placeholder="e.g., Rent, Light Bill"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Amount (₹)</label>
+              <input
+                type="number"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                value={formData.amount || ""}
+                onChange={(e) => setFormData((prev) => ({ ...prev, amount: Number.parseFloat(e.target.value) || 0 }))}
+                placeholder="0"
+                step="0.01"
+                min="0.01"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                value={formData.paymentType}
+                onChange={(e) => setFormData((prev) => ({ ...prev, paymentType: e.target.value }))}
+              >
+                <option value="">Select payment type</option>
+                {paymentTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Expense Category</label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                value={formData.expenseCategory}
+                onChange={(e) => setFormData((prev) => ({ ...prev, expenseCategory: e.target.value }))}
+              >
+                <option value="">Select category</option>
+                {expenseCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+              rows={4}
+              value={formData.remarks}
+              onChange={(e) => setFormData((prev) => ({ ...prev, remarks: e.target.value }))}
+              placeholder="Enter any remarks"
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium"
+            >
+              Save Expense
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Recent Expenses */}
+      <div className="mt-8 bg-white rounded-lg card-shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Recent Expenses</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Expense Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {expenses.length > 0 ? (
+                expenses.slice(0, 10).map((expense) => (
+                  <tr key={expense.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(expense.date).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.expenseType}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.expenseCategory}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{expense.remarks}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      ₹{expense.amount.toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                      {expense.paymentType}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No expenses recorded yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
