@@ -6,16 +6,22 @@ export default function Dashboard() {
   const lineChartRef = useRef<HTMLCanvasElement>(null)
   const pieChartRef = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => {
-    // Load Chart.js dynamically
+  const lineChartInstance = useRef<any>(null)
+  const pieChartInstance = useRef<any>(null)
+
+   useEffect(() => {
     const loadCharts = async () => {
       const Chart = (await import("chart.js/auto")).default
 
-      // Line Chart - Monthly Sales Overview
+      // Line Chart
       if (lineChartRef.current) {
         const ctx = lineChartRef.current.getContext("2d")
         if (ctx) {
-          new Chart(ctx, {
+          // destroy old chart if exists
+          if (lineChartInstance.current) {
+            lineChartInstance.current.destroy()
+          }
+          lineChartInstance.current = new Chart(ctx, {
             type: "line",
             data: {
               labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -34,21 +40,15 @@ export default function Dashboard() {
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
-                legend: {
-                  display: false,
-                },
+                legend: { display: false },
               },
               scales: {
                 y: {
                   beginAtZero: true,
-                  grid: {
-                    color: "#f3f4f6",
-                  },
+                  grid: { color: "#f3f4f6" },
                 },
                 x: {
-                  grid: {
-                    color: "#f3f4f6",
-                  },
+                  grid: { color: "#f3f4f6" },
                 },
               },
             },
@@ -56,11 +56,14 @@ export default function Dashboard() {
         }
       }
 
-      // Pie Chart - Expense Distribution
+      // Pie Chart
       if (pieChartRef.current) {
         const ctx = pieChartRef.current.getContext("2d")
         if (ctx) {
-          new Chart(ctx, {
+          if (pieChartInstance.current) {
+            pieChartInstance.current.destroy()
+          }
+          pieChartInstance.current = new Chart(ctx, {
             type: "doughnut",
             data: {
               labels: ["Rent", "Electricity", "Salary", "Maintenance", "Others"],
@@ -91,6 +94,12 @@ export default function Dashboard() {
     }
 
     loadCharts()
+
+    // cleanup when component unmounts
+    return () => {
+      if (lineChartInstance.current) lineChartInstance.current.destroy()
+      if (pieChartInstance.current) pieChartInstance.current.destroy()
+    }
   }, [])
 
   return (

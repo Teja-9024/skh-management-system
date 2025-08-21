@@ -25,6 +25,38 @@ interface BillData {
   remarks: string
 }
 
+// Letter→Digit mapping
+const CODE_MAP: Record<string, string> = {
+  D: "1",
+  I: "2",
+  N: "3",
+  E: "4",
+  S: "5",
+  H: "6",
+  J: "7",
+  A: "8",
+  T: "9",
+  P: "0",
+}
+
+// Decode helper: "DIN" -> 123
+function decodePurchaseCode(raw: string): { value: number; valid: boolean } {
+  const code = raw.toUpperCase().replace(/\s+/g, "")
+  if (!code) return { value: 0, valid: false }
+
+  let out = ""
+  for (const ch of code) {
+    if (!(ch in CODE_MAP)) {
+      return { value: 0, valid: false }
+    }
+    out += CODE_MAP[ch]
+  }
+
+  // Remove leading zeros gracefully, but keep 0 if all zeros
+  const num = out.replace(/^0+/, "") || "0"
+  return { value: Number(num), valid: true }
+}
+
 export default function BillingSystem() {
   const [formData, setFormData] = useState<BillData>({
     billNumber: "1",
@@ -48,17 +80,11 @@ export default function BillingSystem() {
     total: 0,
   })
 
-  const [bills, setBills] = useState<(BillData & { id: string; totalAmount: number })[]>([])
-
-  const purchaseCodes = ["D-1", "I-2", "N-3", "E-4", "S-5", "H-6", "J-7", "A-8", "T-9", "P-0"]
-
   const updateCurrentItem = (field: keyof BillItem, value: any) => {
     const updatedItem = { ...currentItem, [field]: value }
-
     if (field === "quantity" || field === "salePrice") {
-      updatedItem.total = updatedItem.quantity * updatedItem.salePrice
+      updatedItem.total = (Number(updatedItem.quantity) || 0) * (Number(updatedItem.salePrice) || 0)
     }
-
     setCurrentItem(updatedItem)
   }
 
@@ -67,19 +93,21 @@ export default function BillingSystem() {
       alert("Please enter product name")
       return
     }
-
     if (currentItem.quantity <= 0) {
       alert("Please enter valid quantity")
       return
     }
-
     if (currentItem.salePrice <= 0) {
       alert("Please enter valid sale price")
       return
     }
-
-    if (!currentItem.purchaseCode) {
-      alert("Please select purchase code")
+    if (!currentItem.purchaseCode.trim()) {
+      alert("Please enter purchase code")
+      return
+    }
+    const decoded = decodePurchaseCode(currentItem.purchaseCode)
+    if (!decoded.valid) {
+      alert("Invalid purchase code")
       return
     }
 
@@ -124,8 +152,9 @@ export default function BillingSystem() {
       ...formData,
       id: Date.now().toString(),
       totalAmount,
-    }
+    } as BillData & { id: string; totalAmount: number }
 
+    // Save
     setBills((prev) => [newBill, ...prev])
 
     // Reset form
@@ -145,6 +174,10 @@ export default function BillingSystem() {
 
     alert("Bill saved successfully!")
   }
+
+  const [bills, setBills] = useState<(BillData & { id: string; totalAmount: number })[]>([])
+
+  const decodedInfo = decodePurchaseCode(currentItem.purchaseCode)
 
   return (
     <div>
@@ -249,22 +282,39 @@ export default function BillingSystem() {
                   min="0.01"
                 />
               </div>
+
+              {/* Purchase Code: text input + live decode */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Code</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus uppercase"
                   value={currentItem.purchaseCode}
-                  onChange={(e) => updateCurrentItem("purchaseCode", e.target.value)}
-                >
-                  <option value="">e.g., DISH</option>
-                  {purchaseCodes.map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Decoded: ₹0</p>
+                  onChange={(e) => updateCurrentItem("purchaseCode", e.target.value.toUpperCase())}
+                  placeholder="e.g., DIN"
+                />
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-500 mt-1">
+                    {decodedInfo.valid ? (
+                      <>Decoded: ₹{decodedInfo.value}</>
+                    ) : currentItem.purchaseCode ? (
+                      <span className="text-red-500">Invalid code</span>
+                    ) : (
+                      "Decoded: ₹0"
+                    )}
+                  </p>
+                  {decodedInfo.valid && (
+                    <button
+                      type="button"
+                      onClick={() => updateCurrentItem("salePrice", decodedInfo.value)}
+                      className="text-xs mt-1 underline text-blue-600"
+                    >
+                      Use as Sale Price
+                    </button>
+                  )}
+                </div>
               </div>
+
               <div className="flex items-end">
                 <button
                   type="button"
@@ -275,7 +325,10 @@ export default function BillingSystem() {
                 </button>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mb-4">Code: D-1, I-2, N-3, E-4, S-5, H-6, J-7, A-8, T-9, P-0</p>
+
+            {/* <p className="text-xs text-gray-500 mb-4">
+              Code Map: D-1, I-2, N-3, E-4, S-5, H-6, J-7, A-8, T-9, P-0
+            </p> */}
 
             {/* Items Table */}
             <div className="overflow-x-auto">
