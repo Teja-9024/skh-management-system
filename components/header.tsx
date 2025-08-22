@@ -35,9 +35,9 @@ export default function Header() {
 
   return (
     <header className="gradient-bg text-white shadow-lg">
-      <div className="container mx-auto px-6 py-4">
+      <div className=" mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center ">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
               <span className="text-purple-600 font-bold text-lg">SK</span>
             </div>

@@ -374,7 +374,7 @@ export default function BillingSystem() {
                 </div>
               </div>
 
-              <div className="flex items-end">
+              <div className="flex items-center mt-2">
                 <button
                   type="button"
                   onClick={addItem}
@@ -567,6 +567,9 @@ export default function BillingSystem() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Items (Name • Sale • Purchase)
                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Remarks
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total
                   </th>
@@ -585,7 +588,6 @@ export default function BillingSystem() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {bill.customer?.mobile || bill.customerMobile || "N/A"}
                     </td>
-
                     {/* ITEMS COLUMN: name • sale • purchase */}
                     <td className="px-6 py-4 text-sm text-gray-900">
                       <ul className="space-y-1">
@@ -599,12 +601,17 @@ export default function BillingSystem() {
                               <span>Sale: ₹{item.salePrice.toFixed(2)}</span>
                               <span>•</span>
                               <span>
-                                Purchase: {dec.valid ? `₹${purchasePrice.toFixed(2)}` : <span className="text-red-500">Invalid</span>}
+                                {/* Purchase: {dec.valid ? `₹${purchasePrice.toFixed(2)}` : <span className="text-red-500">Invalid</span>} */}
+                                Purchase: {item.purchaseCode }
                               </span>
                             </li>
                           )
                         })}
                       </ul>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {bill.customer?.remarks || bill.remarks || "N/A"}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
