@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useApi, useApiMutation } from "@/hooks/use-api"
 
 interface BillItem {
   productName: string
@@ -80,6 +81,39 @@ export default function BillingSystem() {
     total: 0,
   })
 
+  const [bills, setBills] = useState<(BillData & { id: string; totalAmount: number; customer: any; items: any[] })[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const { data: billsData, loading: billsLoading, execute: fetchBills } = useApi()
+  const { mutate: createBill } = useApiMutation()
+
+  useEffect(() => {
+    loadBills()
+    generateNextBillNumber()
+  }, [])
+
+  const loadBills = async () => {
+    try {
+      const data = await fetchBills('/api/bills?limit=10')
+      setBills(data.bills || [])
+    } catch (error) {
+      console.error('Failed to load bills:', error)
+    }
+  }
+
+  const generateNextBillNumber = async () => {
+    try {
+      const data = await fetchBills('/api/bills?limit=1')
+      const lastBill = data.bills?.[0]
+      if (lastBill) {
+        const nextNumber = (parseInt(lastBill.billNumber) + 1).toString()
+        setFormData(prev => ({ ...prev, billNumber: nextNumber }))
+      }
+    } catch (error) {
+      console.error('Failed to generate bill number:', error)
+    }
+  }
+
   const updateCurrentItem = (field: keyof BillItem, value: any) => {
     const updatedItem = { ...currentItem, [field]: value }
     if (field === "quantity" || field === "salePrice") {
@@ -135,7 +169,7 @@ export default function BillingSystem() {
 
   const totalAmount = formData.items.reduce((sum, item) => sum + item.total, 0)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.customerName.trim()) {
@@ -148,34 +182,59 @@ export default function BillingSystem() {
       return
     }
 
-    const newBill = {
-      ...formData,
-      id: Date.now().toString(),
-      totalAmount,
-    } as BillData & { id: string; totalAmount: number }
+    setIsSubmitting(true)
 
-    // Save
-    setBills((prev) => [newBill, ...prev])
+    try {
+      const billData = {
+        billNumber: formData.billNumber,
+        date: formData.date,
+        customer: {
+          name: formData.customerName,
+          mobile: formData.customerMobile,
+        },
+        sellerName: formData.sellerName,
+        items: formData.items.map(item => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          salePrice: item.salePrice,
+          purchaseCode: item.purchaseCode,
+        })),
+        savingBalance: formData.savingBalance,
+        cashPayment: formData.cashPayment,
+        onlinePayment: formData.onlinePayment,
+        borrowedAmount: formData.borrowedAmount,
+        remarks: formData.remarks,
+      }
 
-    // Reset form
-    setFormData({
-      billNumber: (Number.parseInt(formData.billNumber) + 1).toString(),
-      date: new Date().toISOString().split("T")[0],
-      sellerName: "",
-      customerName: "",
-      customerMobile: "",
-      items: [],
-      savingBalance: 0,
-      cashPayment: 0,
-      onlinePayment: 0,
-      borrowedAmount: 0,
-      remarks: "",
-    })
+      await createBill('/api/bills', { body: billData })
 
-    alert("Bill saved successfully!")
+      // Reset form
+      setFormData({
+        billNumber: (Number.parseInt(formData.billNumber) + 1).toString(),
+        date: new Date().toISOString().split("T")[0],
+        sellerName: "",
+        customerName: "",
+        customerMobile: "",
+        items: [],
+        savingBalance: 0,
+        cashPayment: 0,
+        onlinePayment: 0,
+        borrowedAmount: 0,
+        remarks: "",
+      })
+
+      // Reload bills
+      await loadBills()
+      
+      alert("Bill saved successfully!")
+    } catch (error: any) {
+      alert(`Failed to save bill: ${error.message}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const [bills, setBills] = useState<(BillData & { id: string; totalAmount: number })[]>([])
+
 
   const decodedInfo = decodePurchaseCode(currentItem.purchaseCode)
 
@@ -472,18 +531,23 @@ export default function BillingSystem() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium"
+                disabled={isSubmitting}
+                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save Bill
+                {isSubmitting ? "Saving..." : "Save Bill"}
               </button>
             </div>
           </div>
         </form>
       </div>
 
-      {bills.length > 0 && (
-        <div className="mt-8 bg-white rounded-lg card-shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Bills</h3>
+      <div className="mt-8 bg-white rounded-lg card-shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Recent Bills</h3>
+        {billsLoading ? (
+          <div className="text-center py-8">
+            <div className="text-gray-500">Loading bills...</div>
+          </div>
+        ) : bills.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -501,7 +565,7 @@ export default function BillingSystem() {
                     Mobile
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Items
+                    Items (Name • Sale • Purchase)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total
@@ -509,17 +573,40 @@ export default function BillingSystem() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {bills.slice(0, 10).map((bill) => (
+                {bills.map((bill) => (
                   <tr key={bill.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.billNumber}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(bill.date).toLocaleDateString("en-IN")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.customerName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {bill.customerMobile || "N/A"}
+                      {bill.customer?.name || bill.customerName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.items.length} items</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {bill.customer?.mobile || bill.customerMobile || "N/A"}
+                    </td>
+
+                    {/* ITEMS COLUMN: name • sale • purchase */}
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <ul className="space-y-1">
+                        {(bill.items || []).map((item: any, idx: number) => {
+                          const dec = decodePurchaseCode(item.purchaseCode)
+                          const purchasePrice = dec.valid ? dec.value : 0
+                          return (
+                            <li key={idx} className="flex flex-wrap gap-2">
+                              <span className="font-medium">{item.product?.name || item.productName}</span>
+                              <span>•</span>
+                              <span>Sale: ₹{item.salePrice.toFixed(2)}</span>
+                              <span>•</span>
+                              <span>
+                                Purchase: {dec.valid ? `₹${purchasePrice.toFixed(2)}` : <span className="text-red-500">Invalid</span>}
+                              </span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       ₹{bill.totalAmount.toFixed(2)}
                     </td>
@@ -528,8 +615,12 @@ export default function BillingSystem() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-gray-500">No bills found. Create your first bill above.</div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

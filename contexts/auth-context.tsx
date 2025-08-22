@@ -2,18 +2,20 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
-type UserRole = "owner" | "worker"
+type UserRole = "OWNER" | "WORKER"
 
 interface User {
+  id: string
   role: UserRole
   username: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (role: UserRole, username: string) => void
-  logout: () => void
+  login: (username: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
   isAuthenticated: boolean
+  isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -23,23 +25,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for stored authentication on mount
-    const storedUser = localStorage.getItem("handloom-user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
-    }
-    setIsLoading(false)
+    // Check for existing authentication on mount
+    checkAuthStatus()
   }, [])
 
-  const login = (role: UserRole, username: string) => {
-    const userData = { role, username }
-    setUser(userData)
-    localStorage.setItem("handloom-user", JSON.stringify(userData))
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem("handloom-user")
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ username, password }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+        return true
+      } else {
+        const error = await response.json()
+        console.error('Login failed:', error.error)
+        return false
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      return false
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setUser(null)
+    }
   }
 
   if (isLoading) {
@@ -57,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         isAuthenticated: !!user,
+        isLoading,
       }}
     >
       {children}

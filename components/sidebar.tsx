@@ -13,12 +13,18 @@ const menuItems = [
   { href: "/reports", label: "Reports & Analysis", icon: "📈", roles: ["owner"] },
 ]
 
+console.log("menuItems",menuItems)
+
 export default function Sidebar() {
   const pathname = usePathname()
   const { user } = useAuth()
+  console.log("user",user)
 
-  const filteredMenuItems = menuItems.filter((item) => user?.role && item.roles.includes(user.role))
-
+  const filteredMenuItems = menuItems.filter((item) =>
+    user?.role &&
+    item.roles.some(role => role.toLowerCase() === user.role.toLowerCase())
+  );
+  console.log("filteredMenuItems",filteredMenuItems)
   return (
     <aside className="w-64 bg-white shadow-lg">
       <nav className="mt-6">

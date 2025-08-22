@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useApi, useApiMutation } from "@/hooks/use-api"
 
 interface PurchaseData {
   purchaseDate: string
@@ -30,10 +31,27 @@ export default function MarketPurchase() {
     remarks: "",
   })
 
-  const [purchases, setPurchases] = useState<(PurchaseData & { id: string })[]>([])
+  const [purchases, setPurchases] = useState<any[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const stockStatuses = ["Available", "Out of Stock", "Low Stock", "Ordered"]
-  const paymentTypes = ["Cash", "Card", "UPI", "Bank Transfer", "Cheque"]
+  const { data: purchasesData, loading: purchasesLoading, execute: fetchPurchases } = useApi()
+  const { mutate: createPurchase } = useApiMutation()
+
+  const stockStatuses = ["AVAILABLE", "OUT_OF_STOCK", "LOW_STOCK", "ORDERED"]
+  const paymentTypes = ["CASH", "CARD", "UPI", "BANK_TRANSFER", "CHEQUE"]
+
+  useEffect(() => {
+    loadPurchases()
+  }, [])
+
+  const loadPurchases = async () => {
+    try {
+      const data = await fetchPurchases('/api/purchases?limit=10')
+      setPurchases(data.purchases || [])
+    } catch (error) {
+      console.error('Failed to load purchases:', error)
+    }
+  }
 
   const updateFormData = (field: keyof PurchaseData, value: any) => {
     const updatedData = { ...formData, [field]: value }
@@ -45,7 +63,7 @@ export default function MarketPurchase() {
     setFormData(updatedData)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.productName.trim()) {
@@ -68,28 +86,50 @@ export default function MarketPurchase() {
       return
     }
 
-    const newPurchase = {
-      ...formData,
-      id: Date.now().toString(),
+    setIsSubmitting(true)
+
+    try {
+      const purchaseData = {
+        purchaseDate: formData.purchaseDate,
+        product: {
+          name: formData.productName,
+        },
+        supplier: {
+          name: formData.supplierName,
+        },
+        purchasePrice: formData.purchasePrice,
+        quantity: formData.quantity,
+        stockStatus: formData.stockStatus,
+        paymentType: formData.paymentType,
+        borrowedAmount: formData.borrowedAmount,
+        remarks: formData.remarks,
+      }
+
+      await createPurchase('/api/purchases', { body: purchaseData })
+
+      // Reset form
+      setFormData({
+        purchaseDate: new Date().toISOString().split("T")[0],
+        productName: "",
+        supplierName: "",
+        purchasePrice: 0,
+        quantity: 0,
+        stockStatus: "AVAILABLE",
+        totalValue: 0,
+        paymentType: "CASH",
+        borrowedAmount: 0,
+        remarks: "",
+      })
+
+      // Reload purchases
+      await loadPurchases()
+      
+      alert("Purchase record saved successfully!")
+    } catch (error: any) {
+      alert(`Failed to save purchase: ${error.message}`)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setPurchases((prev) => [newPurchase, ...prev])
-
-    // Reset form
-    setFormData({
-      purchaseDate: new Date().toISOString().split("T")[0],
-      productName: "",
-      supplierName: "",
-      purchasePrice: 0,
-      quantity: 0,
-      stockStatus: "Available",
-      totalValue: 0,
-      paymentType: "Cash",
-      borrowedAmount: 0,
-      remarks: "",
-    })
-
-    alert("Purchase record saved successfully!")
   }
 
   return (
@@ -232,17 +272,22 @@ export default function MarketPurchase() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium"
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Purchase
+              {isSubmitting ? "Saving..." : "Save Purchase"}
             </button>
           </div>
         </form>
       </div>
 
-      {purchases.length > 0 && (
-        <div className="mt-8 bg-white rounded-lg card-shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Purchases</h3>
+      <div className="mt-8 bg-white rounded-lg card-shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Recent Purchases</h3>
+        {purchasesLoading ? (
+          <div className="text-center py-8">
+            <div className="text-gray-500">Loading purchases...</div>
+          </div>
+        ) : purchases.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -268,13 +313,17 @@ export default function MarketPurchase() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {purchases.slice(0, 10).map((purchase) => (
+                {purchases.map((purchase) => (
                   <tr key={purchase.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(purchase.purchaseDate).toLocaleDateString("en-IN")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.productName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.supplierName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {purchase.product?.name || purchase.productName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {purchase.supplier?.name || purchase.supplierName}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       ₹{purchase.totalValue.toLocaleString("en-IN")}
@@ -282,14 +331,14 @@ export default function MarketPurchase() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          purchase.stockStatus === "Available"
+                          purchase.stockStatus === "AVAILABLE"
                             ? "bg-green-100 text-green-800"
-                            : purchase.stockStatus === "Low Stock"
+                            : purchase.stockStatus === "LOW_STOCK"
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {purchase.stockStatus}
+                        {purchase.stockStatus?.replace('_', ' ')}
                       </span>
                     </td>
                   </tr>
@@ -297,8 +346,12 @@ export default function MarketPurchase() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-gray-500">No purchases found. Create your first purchase above.</div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

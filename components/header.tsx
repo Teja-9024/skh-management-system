@@ -28,8 +28,8 @@ export default function Header() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push("/login")
   }
 
@@ -57,7 +57,7 @@ export default function Header() {
               <div className="text-right">
                 <p className="text-sm text-purple-100">Logged in as</p>
                 <p className="font-semibold capitalize">
-                  {user?.role} - {user?.username}
+                  {user?.role?.toLowerCase()} - {user?.username}
                 </p>
               </div>
 

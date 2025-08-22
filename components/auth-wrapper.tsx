@@ -9,11 +9,13 @@ import Header from "./header"
 import Sidebar from "./sidebar"
 
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, isLoading } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
 
   useEffect(() => {
+    if (isLoading) return // Don't redirect while loading
+
     // Redirect to login if not authenticated and not already on login page
     if (!isAuthenticated && pathname !== "/login") {
       router.push("/login")
@@ -22,16 +24,25 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
     // Redirect authenticated users away from login page
     if (isAuthenticated && pathname === "/login") {
-      router.push(user?.role === "worker" ? "/billing" : "/")
+      router.push(user?.role === "WORKER" ? "/billing" : "/")
       return
     }
 
     // Restrict worker access to only billing page
-    if (isAuthenticated && user?.role === "worker" && pathname !== "/billing") {
+    if (isAuthenticated && user?.role === "WORKER" && pathname !== "/billing") {
       router.push("/billing")
       return
     }
-  }, [isAuthenticated, pathname, router, user])
+  }, [isAuthenticated, pathname, router, user, isLoading])
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    )
+  }
 
   if (!isAuthenticated && pathname === "/login") {
     return <>{children}</>
