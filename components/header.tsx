@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
+import { Menu, X } from "lucide-react"
 
 export default function Header() {
   const [currentDate, setCurrentDate] = useState("")
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, logout } = useAuth()
   const router = useRouter()
 
@@ -34,20 +36,29 @@ export default function Header() {
   }
 
   return (
-    <header className="gradient-bg text-white shadow-lg">
-      <div className=" mx-auto px-6 py-4">
+    <header className="fixed top-0 left-0 right-0 z-50 gradient-bg text-white shadow-lg header-shadow">
+      <div className="mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center ">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <span className="text-purple-600 font-bold text-lg">SK</span>
+          <div className="flex items-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center">
+              <span className="text-purple-600 font-bold text-sm sm:text-lg">SK</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Shree Krishna Handloom</h1>
-              <p className="text-purple-100 text-sm">Management System</p>
+            <div className="ml-3">
+              <h1 className="text-lg sm:text-2xl font-bold">Shree Krishna Handloom</h1>
+              <p className="text-purple-100 text-xs sm:text-sm">Management System</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-6">
+          {/* Mobile menu button */}
+          <button
+            className="lg:hidden p-2 rounded-md text-white hover:bg-white/20 transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          {/* Desktop menu */}
+          <div className="hidden lg:flex items-center space-x-6">
             <div className="text-right">
               <p className="text-sm text-purple-100">Today's Date</p>
               <p className="font-semibold">{currentDate}</p>
@@ -70,6 +81,34 @@ export default function Header() {
             </div>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden mt-4 pb-4 border-t border-white/20">
+            <div className="pt-4 space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-purple-100">Today's Date</p>
+                <p className="font-semibold">{currentDate}</p>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-sm text-purple-100">Logged in as</p>
+                <p className="font-semibold capitalize">
+                  {user?.role?.toLowerCase()} - {user?.username}
+                </p>
+              </div>
+
+              <div className="text-center">
+                <button
+                  onClick={handleLogout}
+                  className="bg-white/20 hover:bg-white/30 px-6 py-2 rounded-lg transition-colors duration-200 text-sm font-medium w-full"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   )
