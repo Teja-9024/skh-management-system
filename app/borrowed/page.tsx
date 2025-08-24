@@ -132,57 +132,57 @@ export default function BorrowedMoney() {
   const netOutstanding = totals.borrowed - totals.lent
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-800">Money Management Tracker</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Money Management Tracker</h2>
         <p className="text-gray-600">Track borrowed money, lending, and money usage with detailed records</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg card-shadow">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+        <div className="bg-white p-4 sm:p-6 rounded-lg card-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Money Borrowed</p>
-              <p className="text-2xl font-bold text-red-600">₹{totals.borrowed.toLocaleString("en-IN")}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Total Money Borrowed</p>
+              <p className="text-lg sm:text-2xl font-bold text-red-600">₹{totals.borrowed.toLocaleString("en-IN")}</p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <span className="text-red-600 text-xl">📉</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-red-600 text-lg sm:text-xl">📉</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg card-shadow">
+        <div className="bg-white p-4 sm:p-6 rounded-lg card-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Money Lent</p>
-              <p className="text-2xl font-bold text-blue-600">₹{totals.lent.toLocaleString("en-IN")}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Total Money Lent</p>
+              <p className="text-lg sm:text-2xl font-bold text-blue-600">₹{totals.lent.toLocaleString("en-IN")}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-xl">📈</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 text-lg sm:text-xl">📈</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg card-shadow">
+        <div className="bg-white p-4 sm:p-6 rounded-lg card-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Net Outstanding</p>
-              <p className={`text-2xl font-bold ${netOutstanding >= 0 ? "text-orange-600" : "text-green-600"}`}>
+              <p className="text-xs sm:text-sm font-medium text-gray-600">Net Outstanding</p>
+              <p className={`text-lg sm:text-2xl font-bold ${netOutstanding >= 0 ? "text-orange-600" : "text-green-600"}`}>
                 ₹{Math.abs(netOutstanding).toLocaleString("en-IN")}
               </p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-              <span className="text-orange-600 text-xl">💰</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-full flex items-center justify-center">
+              <span className="text-orange-600 text-lg sm:text-xl">💰</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg card-shadow p-6 mb-6">
+      <div className="bg-white rounded-lg card-shadow p-4 sm:p-6 mb-6">
         <h3 className="text-lg font-semibold mb-6">Transaction Type</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
           <div className="border rounded-lg p-4">
             <label className="flex items-start space-x-3 cursor-pointer">
               <input
@@ -236,7 +236,7 @@ export default function BorrowedMoney() {
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
               <input
@@ -277,7 +277,7 @@ export default function BorrowedMoney() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {formData.transactionType === "repayment" ? "Repaying To" : "Source (From Whom)"}
@@ -332,7 +332,7 @@ export default function BorrowedMoney() {
 
           <div className="border-t pt-6">
             <h4 className="text-lg font-semibold mb-4">Purpose & Usage</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Primary Purpose</label>
                 <select
@@ -360,7 +360,7 @@ export default function BorrowedMoney() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Interest Rate (%)</label>
                 <input
@@ -420,7 +420,7 @@ export default function BorrowedMoney() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium"
             >
               Save Transaction
             </button>
@@ -429,10 +429,10 @@ export default function BorrowedMoney() {
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-white rounded-lg card-shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Recent Transactions</h3>
-          <div className="flex space-x-2">
+      <div className="bg-white rounded-lg card-shadow p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
+          <h3 className="text-lg font-semibold mb-2 sm:mb-0">Recent Transactions</h3>
+          <div className="flex flex-wrap gap-2">
             <button className="px-3 py-1 text-xs bg-gray-100 rounded">All</button>
             <button className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded">Borrowed</button>
             <button className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded">Lent</button>
@@ -443,21 +443,21 @@ export default function BorrowedMoney() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Source/Destination
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Purpose
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -465,10 +465,10 @@ export default function BorrowedMoney() {
             <tbody className="bg-white divide-y divide-gray-200">
               {transactions.slice(0, 10).map((transaction) => (
                 <tr key={transaction.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(transaction.date).toLocaleDateString("en-IN")}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         transaction.transactionType === "borrowed"
@@ -481,16 +481,16 @@ export default function BorrowedMoney() {
                       {transaction.transactionType.charAt(0).toUpperCase() + transaction.transactionType.slice(1)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>{transaction.personName}</div>
                     <div className="text-xs text-gray-500">{transaction.destination}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     ₹{transaction.amount.toLocaleString("en-IN")}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{transaction.primaryPurpose}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{transaction.status}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{transaction.primaryPurpose}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{transaction.status}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm space-x-2">
                     <button className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">View</button>
                     <button className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600">
                       Edit

@@ -29,6 +29,27 @@ export default function Sidebar() {
     setIsMobileOpen(false)
   }, [pathname])
 
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const sidebar = document.getElementById('mobile-sidebar')
+      const toggleButton = document.getElementById('mobile-toggle')
+      
+      if (sidebar && !sidebar.contains(event.target as Node) && 
+          toggleButton && !toggleButton.contains(event.target as Node)) {
+        setIsMobileOpen(false)
+      }
+    }
+
+    if (isMobileOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isMobileOpen])
+
   return (
     <>
       {/* Desktop Sidebar */}
@@ -47,8 +68,8 @@ export default function Sidebar() {
                   isActive ? "active-tab text-white" : "text-gray-700 hover:text-white"
                 }`}
               >
-                <span className="mr-3">{item.icon}</span>
-                {item.label}
+                <span className="mr-3 text-lg">{item.icon}</span>
+                <span className="text-sm font-medium">{item.label}</span>
               </Link>
             )
           })}
@@ -64,9 +85,12 @@ export default function Sidebar() {
       )}
 
       {/* Mobile Sidebar */}
-      <aside className={`lg:hidden fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out sidebar-scroll ${
-        isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <aside 
+        id="mobile-sidebar"
+        className={`lg:hidden fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out sidebar-scroll ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <nav className="mt-6">
           <div className="px-6 py-3">
             <h3 className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Modules</h3>
@@ -80,9 +104,10 @@ export default function Sidebar() {
                 className={`sidebar-item flex items-center px-6 py-3 transition-colors duration-200 ${
                   isActive ? "active-tab text-white" : "text-gray-700 hover:text-white"
                 }`}
+                onClick={() => setIsMobileOpen(false)}
               >
-                <span className="mr-3">{item.icon}</span>
-                {item.label}
+                <span className="mr-3 text-lg">{item.icon}</span>
+                <span className="text-sm font-medium">{item.label}</span>
               </Link>
             )
           })}
@@ -91,6 +116,7 @@ export default function Sidebar() {
 
       {/* Mobile Menu Toggle Button */}
       <button
+        id="mobile-toggle"
         className="lg:hidden fixed bottom-4 right-4 z-50 w-12 h-12 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition-colors"
         onClick={() => setIsMobileOpen(!isMobileOpen)}
       >

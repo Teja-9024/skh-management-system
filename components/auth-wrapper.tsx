@@ -61,8 +61,8 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     <>
       <Header />
       <Sidebar />
-      <main className="pt-16 lg:pl-64 min-h-screen bg-gray-50">
-        <div className="p-4 sm:p-6">
+      <main className="pl-0 lg:ml-64 min-h-screen bg-gray-50">
+        <div className="p-3 sm:p-4 md:p-6">
           {children}
         </div>
       </main>

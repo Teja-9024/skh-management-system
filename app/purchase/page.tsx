@@ -24,9 +24,9 @@ export default function MarketPurchase() {
     supplierName: "",
     purchasePrice: 0,
     quantity: 0,
-    stockStatus: "Available",
+    stockStatus: "AVAILABLE",
     totalValue: 0,
-    paymentType: "Cash",
+    paymentType: "CASH",
     borrowedAmount: 0,
     remarks: "",
   })
@@ -133,15 +133,15 @@ export default function MarketPurchase() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-800">Market Purchase Entry</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Market Purchase Entry</h2>
         <p className="text-gray-600">Record inventory purchases from suppliers</p>
       </div>
 
-      <div className="bg-white rounded-lg card-shadow p-6">
+      <div className="bg-white rounded-lg card-shadow p-4 sm:p-6">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Date</label>
               <input
@@ -176,7 +176,7 @@ export default function MarketPurchase() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Price</label>
               <input
@@ -212,7 +212,7 @@ export default function MarketPurchase() {
               >
                 {stockStatuses.map((status) => (
                   <option key={status} value={status}>
-                    {status}
+                    {status.replace('_', ' ')}
                   </option>
                 ))}
               </select>
@@ -228,7 +228,7 @@ export default function MarketPurchase() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
               <select
@@ -239,7 +239,7 @@ export default function MarketPurchase() {
               >
                 {paymentTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {type.replace('_', ' ')}
                   </option>
                 ))}
               </select>
@@ -273,7 +273,7 @@ export default function MarketPurchase() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Saving..." : "Save Purchase"}
             </button>
@@ -281,7 +281,7 @@ export default function MarketPurchase() {
         </form>
       </div>
 
-      <div className="mt-8 bg-white rounded-lg card-shadow p-6">
+      <div className="mt-8 bg-white rounded-lg card-shadow p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Recent Purchases</h3>
         {purchasesLoading ? (
           <div className="text-center py-8">
@@ -292,22 +292,22 @@ export default function MarketPurchase() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Product
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Supplier
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Quantity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total Value
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                 </tr>
@@ -315,20 +315,20 @@ export default function MarketPurchase() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {purchases.map((purchase) => (
                   <tr key={purchase.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(purchase.purchaseDate).toLocaleDateString("en-IN")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {purchase.product?.name || purchase.productName}
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {purchase.product?.name || purchase.productName || "N/A"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {purchase.supplier?.name || purchase.supplierName}
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {purchase.supplier?.name || purchase.supplierName || "N/A"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ₹{purchase.totalValue.toLocaleString("en-IN")}
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      ₹{(purchase.totalValue || 0).toLocaleString("en-IN")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           purchase.stockStatus === "AVAILABLE"

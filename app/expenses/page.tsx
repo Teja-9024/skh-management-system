@@ -110,27 +110,27 @@ export default function ShopExpenses() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-800">Shop Expenses</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Shop Expenses</h2>
         <p className="text-gray-600">Log all operational expenses</p>
       </div>
 
-      <div className="mb-6 bg-white rounded-lg card-shadow p-6">
+      <div className="mb-6 bg-white rounded-lg card-shadow p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-            <p className="text-2xl font-bold text-red-600">₹{totalExpenses.toLocaleString("en-IN")}</p>
+            <p className="text-xs sm:text-sm font-medium text-gray-600">Total Expenses</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-600">₹{totalExpenses.toLocaleString("en-IN")}</p>
           </div>
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-            <span className="text-red-600 text-xl">💸</span>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <span className="text-red-600 text-lg sm:text-xl">💸</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg card-shadow p-6">
+      <div className="bg-white rounded-lg card-shadow p-4 sm:p-6">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
               <input
@@ -167,7 +167,7 @@ export default function ShopExpenses() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
               <select
@@ -179,7 +179,7 @@ export default function ShopExpenses() {
                 <option value="">Select payment type</option>
                 {paymentTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {type.replace('_', ' ')}
                   </option>
                 ))}
               </select>
@@ -195,7 +195,7 @@ export default function ShopExpenses() {
                 <option value="">Select category</option>
                 {expenseCategories.map((category) => (
                   <option key={category} value={category}>
-                    {category}
+                    {category.replace('_', ' ')}
                   </option>
                 ))}
               </select>
@@ -217,7 +217,7 @@ export default function ShopExpenses() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Saving..." : "Save Expense"}
             </button>
@@ -226,7 +226,7 @@ export default function ShopExpenses() {
       </div>
 
       {/* Recent Expenses */}
-      <div className="mt-8 bg-white rounded-lg card-shadow p-6">
+      <div className="mt-8 bg-white rounded-lg card-shadow p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Recent Expenses</h3>
         {expensesLoading ? (
           <div className="text-center py-8">
@@ -237,20 +237,20 @@ export default function ShopExpenses() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Expense Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Description
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment
                   </th>
                 </tr>
@@ -259,25 +259,25 @@ export default function ShopExpenses() {
                 {expenses.length > 0 ? (
                   expenses.map((expense) => (
                     <tr key={expense.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {new Date(expense.date).toLocaleDateString("en-IN")}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.expenseType}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {expense.expenseCategory?.replace('_', ' ')}
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.expenseType}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {(expense.expenseCategory || "").replace('_', ' ')}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{expense.remarks}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ₹{expense.amount.toLocaleString("en-IN")}
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{expense.remarks}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ₹{(expense.amount || 0).toLocaleString("en-IN")}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                        {expense.paymentType?.replace('_', ' ').toLowerCase()}
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                        {(expense.paymentType || "").replace('_', ' ').toLowerCase()}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={6} className="px-3 sm:px-6 py-4 text-center text-sm text-gray-500">
                       No expenses recorded yet
                     </td>
                   </tr>

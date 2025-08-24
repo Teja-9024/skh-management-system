@@ -234,20 +234,18 @@ export default function BillingSystem() {
     }
   }
 
-
-
   const decodedInfo = decodePurchaseCode(currentItem.purchaseCode)
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-800">Billing System</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Billing System</h2>
         <p className="text-gray-600">Create and manage customer bills</p>
       </div>
 
-      <div className="bg-white rounded-lg card-shadow p-6">
+      <div className="bg-white rounded-lg card-shadow p-4 sm:p-6">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Bill Number</label>
               <input
@@ -281,7 +279,7 @@ export default function BillingSystem() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Customer Name</label>
               <input
@@ -307,8 +305,8 @@ export default function BillingSystem() {
 
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Add Item</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4">
+              <div className="sm:col-span-2 lg:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
                 <input
                   type="text"
@@ -343,7 +341,7 @@ export default function BillingSystem() {
               </div>
 
               {/* Purchase Code: text input + live decode */}
-              <div>
+              <div className="sm:col-span-2 lg:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Code</label>
                 <input
                   type="text"
@@ -352,8 +350,8 @@ export default function BillingSystem() {
                   onChange={(e) => updateCurrentItem("purchaseCode", e.target.value.toUpperCase())}
                   placeholder="e.g., DIN"
                 />
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-500 mt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1">
+                  <p className="text-xs text-gray-500">
                     {decodedInfo.valid ? (
                       <>Decoded: ₹{decodedInfo.value}</>
                     ) : currentItem.purchaseCode ? (
@@ -366,7 +364,7 @@ export default function BillingSystem() {
                     <button
                       type="button"
                       onClick={() => updateCurrentItem("salePrice", decodedInfo.value)}
-                      className="text-xs mt-1 underline text-blue-600"
+                      className="text-xs mt-1 sm:mt-0 underline text-blue-600"
                     >
                       Use as Sale Price
                     </button>
@@ -374,7 +372,7 @@ export default function BillingSystem() {
                 </div>
               </div>
 
-              <div className="flex items-center mt-2">
+              <div className="flex items-center mt-2 sm:mt-0">
                 <button
                   type="button"
                   onClick={addItem}
@@ -385,31 +383,27 @@ export default function BillingSystem() {
               </div>
             </div>
 
-            {/* <p className="text-xs text-gray-500 mb-4">
-              Code Map: D-1, I-2, N-3, E-4, S-5, H-6, J-7, A-8, T-9, P-0
-            </p> */}
-
             {/* Items Table */}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Product Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Qty
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Purchase Code
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Sale Price
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -418,16 +412,16 @@ export default function BillingSystem() {
                   {formData.items.length > 0 ? (
                     formData.items.map((item, index) => (
                       <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.productName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.purchaseCode}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.productName}</td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.purchaseCode}</td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           ₹{item.salePrice.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           ₹{item.total.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm">
                           <button
                             type="button"
                             onClick={() => removeItem(index)}
@@ -440,7 +434,7 @@ export default function BillingSystem() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={6} className="px-3 sm:px-6 py-4 text-center text-sm text-gray-500">
                         No items added yet. Fill the form above and click "Add Item".
                       </td>
                     </tr>
@@ -452,7 +446,7 @@ export default function BillingSystem() {
 
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Payment Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Saving Balance</label>
                 <input
@@ -524,15 +518,15 @@ export default function BillingSystem() {
           </div>
 
           <div className="border-t pt-4">
-            <div className="flex justify-between items-center text-xl font-bold mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-xl font-bold mb-4">
               <span>Total Amount:</span>
-              <span className="text-blue-600">₹{totalAmount.toFixed(2)}</span>
+              <span className="text-blue-600 mt-2 sm:mt-0">₹{totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Saving..." : "Save Bill"}
               </button>
@@ -541,7 +535,7 @@ export default function BillingSystem() {
         </form>
       </div>
 
-      <div className="mt-8 bg-white rounded-lg card-shadow p-6">
+      <div className="mt-8 bg-white rounded-lg card-shadow p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Recent Bills</h3>
         {billsLoading ? (
           <div className="text-center py-8">
@@ -549,28 +543,28 @@ export default function BillingSystem() {
           </div>
         ) : bills.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className=" min-w-[980px] sm:min-w-full divide-gray-200  border-collapse">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Bill #
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Customer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Mobile
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Items (Name • Sale • Purchase)
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Items
                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                   <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Remarks
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total
                   </th>
                 </tr>
@@ -578,18 +572,18 @@ export default function BillingSystem() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {bills.map((bill) => (
                   <tr key={bill.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.billNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.billNumber}</td>
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(bill.date).toLocaleDateString("en-IN")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {bill.customer?.name || bill.customerName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {bill.customer?.mobile || bill.customerMobile || "N/A"}
                     </td>
                     {/* ITEMS COLUMN: name • sale • purchase */}
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-4 text-sm text-gray-900">
                       <ul className="space-y-1">
                         {(bill.items || []).map((item: any, idx: number) => {
                           const dec = decodePurchaseCode(item.purchaseCode)
@@ -601,7 +595,6 @@ export default function BillingSystem() {
                               <span>Sale: ₹{item.salePrice.toFixed(2)}</span>
                               <span>•</span>
                               <span>
-                                {/* Purchase: {dec.valid ? `₹${purchasePrice.toFixed(2)}` : <span className="text-red-500">Invalid</span>} */}
                                 Purchase: {item.purchaseCode }
                               </span>
                             </li>
@@ -610,11 +603,11 @@ export default function BillingSystem() {
                       </ul>
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {bill.customer?.remarks || bill.remarks || "N/A"}
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       ₹{bill.totalAmount.toFixed(2)}
                     </td>
                   </tr>
