@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useApi, useApiMutation } from "@/hooks/use-api"
+import { exportToPDF } from "@/utils/exportToPDF"
+import { exportToExcel } from "@/utils/exportToExcel"
 
 interface BillItem {
   productName: string
@@ -350,7 +352,7 @@ export default function BillingSystem() {
                   onChange={(e) => updateCurrentItem("purchaseCode", e.target.value.toUpperCase())}
                   placeholder="e.g., DIN"
                 />
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1">
+                {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1">
                   <p className="text-xs text-gray-500">
                     {decodedInfo.valid ? (
                       <>Decoded: ₹{decodedInfo.value}</>
@@ -369,7 +371,7 @@ export default function BillingSystem() {
                       Use as Sale Price
                     </button>
                   )}
-                </div>
+                </div> */}
               </div>
 
               <div className="flex items-center mt-2 sm:mt-0">
@@ -536,85 +538,207 @@ export default function BillingSystem() {
       </div>
 
       <div className="mt-8 bg-white rounded-lg card-shadow p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4">Recent Bills</h3>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
+          <h3 className="text-lg font-semibold mb-2 sm:mb-0">Recent Bills</h3>
+          
+          {/* Download Buttons */}
+          {bills.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  const data = bills.map(bill => ({
+                    billNumber: bill.billNumber,
+                    date: new Date(bill.date).toLocaleDateString("en-IN"),
+                    customer: bill.customer?.name || bill.customerName || "N/A",
+                    mobile: bill.customer?.mobile || bill.customerMobile || "N/A",
+                    items: (bill.items || []).map((item: any) => 
+                      `${item.product?.name || item.productName} (Qty: ${item.quantity})`
+                    ).join(", "),
+                    remarks: bill.customer?.remarks || bill.remarks || "N/A",
+                    totalAmount: bill.totalAmount
+                  }))
+                  
+                  exportToPDF({
+                    title: "Billing Report",
+                    dateRange: `Generated on ${new Date().toLocaleDateString("en-IN")}`,
+                    columns: ["billNumber", "date", "customer", "mobile", "items", "remarks", "totalAmount"],
+                    data,
+                    columnLabels: ["Bill #", "Date", "Customer", "Mobile", "Items", "Remarks", "Total Amount"],
+                    currencyColumns: ["totalAmount"],
+                    orientation: 'landscape'
+                  })
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                📄 Download PDF
+              </button>
+              <button
+                onClick={() => {
+                  const data = bills.map(bill => ({
+                    billNumber: bill.billNumber,
+                    date: new Date(bill.date).toLocaleDateString("en-IN"),
+                    customer: bill.customer?.name || bill.customerName || "N/A",
+                    mobile: bill.customer?.mobile || bill.customerMobile || "N/A",
+                    items: (bill.items || []).map((item: any) => 
+                      `${item.product?.name || item.productName} (Qty: ${item.quantity})`
+                    ).join(", "),
+                    remarks: bill.customer?.remarks || bill.remarks || "N/A",
+                    totalAmount: bill.totalAmount
+                  }))
+                  
+                  exportToExcel({
+                    title: "Billing Report",
+                    dateRange: `Generated on ${new Date().toLocaleDateString("en-IN")}`,
+                    columns: ["billNumber", "date", "customer", "mobile", "items", "remarks", "totalAmount"],
+                    data,
+                    columnLabels: ["Bill #", "Date", "Customer", "Mobile", "Items", "Remarks", "Total Amount"],
+                    currencyColumns: ["totalAmount"]
+                  })
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                📊 Download Excel
+              </button>
+            </div>
+          )}
+        </div>
         {billsLoading ? (
           <div className="text-center py-8">
             <div className="text-gray-500">Loading bills...</div>
           </div>
         ) : bills.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className=" min-w-[980px] sm:min-w-full divide-gray-200  border-collapse">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Bill #
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Mobile
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Items
-                  </th>
-                   <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Remarks
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {bills.map((bill) => (
-                  <tr key={bill.id}>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.billNumber}</td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <>
+            {/* Mobile Card View */}
+            <div className="block lg:hidden space-y-4">
+              {bills.map((bill) => (
+                <div key={bill.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="text-lg font-bold text-blue-600">#{bill.billNumber}</div>
+                    <div className="text-sm text-gray-500">
                       {new Date(bill.date).toLocaleDateString("en-IN")}
-                    </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="font-medium text-gray-500 mb-1">Customer</div>
+                    <div className="font-semibold text-gray-800">
                       {bill.customer?.name || bill.customerName}
-                    </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {bill.customer?.mobile || bill.customerMobile || "N/A"}
-                    </td>
-                    {/* ITEMS COLUMN: name • sale • purchase */}
-                    <td className="px-3 sm:px-6 py-4 text-sm text-gray-900">
-                      <ul className="space-y-1">
-                        {(bill.items || []).map((item: any, idx: number) => {
-                          const dec = decodePurchaseCode(item.purchaseCode)
-                          const purchasePrice = dec.valid ? dec.value : 0
-                          return (
-                            <li key={idx} className="flex flex-wrap gap-2">
-                              <span className="font-medium">{item.product?.name || item.productName}</span>
-                              <span>•</span>
-                              <span>Sale: ₹{item.salePrice.toFixed(2)}</span>
-                              <span>•</span>
-                              <span>
-                                Purchase: {item.purchaseCode }
-                              </span>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </td>
+                    </div>
+                    {bill.customer?.mobile || bill.customerMobile ? (
+                      <div className="text-sm text-blue-600">📱 {bill.customer?.mobile || bill.customerMobile}</div>
+                    ) : null}
+                  </div>
+                  
+                  <div>
+                    <div className="font-medium text-gray-500 mb-1">Items</div>
+                    <ul className="space-y-1">
+                      {(bill.items || []).map((item: any, idx: number) => {
+                        const dec = decodePurchaseCode(item.purchaseCode)
+                        const purchasePrice = dec.valid ? dec.value : 0
+                        return (
+                          <li key={idx} className="text-sm text-gray-600 border-l-2 border-gray-200 pl-2">
+                            <div className="font-medium">{item.product?.name || item.productName}</div>
+                            <div className="text-xs text-gray-500">
+                              Sale: ₹{item.salePrice.toFixed(2)} | Purchase: {item.purchaseCode} (₹{purchasePrice.toFixed(2)})
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                  
+                  {bill.customer?.remarks || bill.remarks ? (
+                    <div>
+                      <div className="font-medium text-gray-500 mb-1">Remarks</div>
+                      <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
+                        {bill.customer?.remarks || bill.remarks}
+                      </div>
+                    </div>
+                  ) : null}
+                  
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="font-medium text-gray-700 mb-1">Total Amount</div>
+                    <div className="text-lg font-bold text-green-600">₹{bill.totalAmount.toFixed(2)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {bill.customer?.remarks || bill.remarks || "N/A"}
-                    </td>
-
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ₹{bill.totalAmount.toFixed(2)}
-                    </td>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="min-w-[980px] sm:min-w-full divide-gray-200 border-collapse">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Bill #
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Mobile
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Items
+                    </th>
+                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Remarks
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {bills.map((bill) => (
+                    <tr key={bill.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.billNumber}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(bill.date).toLocaleDateString("en-IN")}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {bill.customer?.name || bill.customerName}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {bill.customer?.mobile || bill.customerMobile || "N/A"}
+                      </td>
+                      {/* ITEMS COLUMN: name • sale • purchase */}
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-900">
+                        <ul className="space-y-1">
+                          {(bill.items || []).map((item: any, idx: number) => {
+                            const dec = decodePurchaseCode(item.purchaseCode)
+                            const purchasePrice = dec.valid ? dec.value : 0
+                            return (
+                              <li key={idx} className="flex flex-wrap gap-2">
+                                <span className="font-medium">{item.product?.name || item.productName}</span>
+                                <span>•</span>
+                                <span>Sale: ₹{item.salePrice.toFixed(2)}</span>
+                                <span>•</span>
+                                <span>
+                                  Purchase: {item.purchaseCode }
+                                </span>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </td>
+
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {bill.customer?.remarks || bill.remarks || "N/A"}
+                      </td>
+
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ₹{bill.totalAmount.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <div className="text-center py-8">
             <div className="text-gray-500">No bills found. Create your first bill above.</div>

@@ -5,9 +5,13 @@ import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { Menu, X } from "lucide-react"
 
-export default function Header() {
+interface HeaderProps {
+  onMobileMenuToggle: () => void
+  isMobileMenuOpen: boolean
+}
+
+export default function Header({ onMobileMenuToggle, isMobileMenuOpen }: HeaderProps) {
   const [currentDate, setCurrentDate] = useState("")
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, logout } = useAuth()
   const router = useRouter()
 
@@ -51,11 +55,27 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <button
+            id="mobile-toggle"
             className="lg:hidden p-2 rounded-md text-white hover:bg-white/20 transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={() => {
+              console.log('Header button clicked!')
+              onMobileMenuToggle()
+            }}
+            aria-label="Toggle mobile menu"
           >
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
+
+          {/* Temporary test button - remove this later */}
+          {/* <button
+            className="lg:hidden ml-2 p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+            onClick={() => {
+              console.log('Test button clicked!')
+              onMobileMenuToggle()
+            }}
+          >
+            TEST
+          </button> */}
 
           {/* Desktop menu */}
           <div className="hidden lg:flex items-center space-x-4 lg:space-x-6">
@@ -81,34 +101,6 @@ export default function Header() {
             </div>
           </div>
         </div>
-
-        {/* Mobile menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden mt-3 sm:mt-4 pb-3 sm:pb-4 border-t border-white/20">
-            <div className="pt-3 sm:pt-4 space-y-3 sm:space-y-4">
-              <div className="text-center">
-                <p className="text-sm text-purple-100">Today's Date</p>
-                <p className="font-semibold text-sm">{currentDate}</p>
-              </div>
-              
-              <div className="text-center">
-                <p className="text-sm text-purple-100">Logged in as</p>
-                <p className="font-semibold capitalize text-sm">
-                  {user?.role?.toLowerCase()} - {user?.username}
-                </p>
-              </div>
-
-              <div className="text-center">
-                <button
-                  onClick={handleLogout}
-                  className="bg-white/20 hover:bg-white/30 px-6 py-2 rounded-lg transition-colors duration-200 text-sm font-medium w-full"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   )

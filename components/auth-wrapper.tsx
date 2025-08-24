@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useAuth } from "@/contexts/auth-context"
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Header from "./header"
 import Sidebar from "./sidebar"
 
@@ -12,6 +12,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
   const { isAuthenticated, user, isLoading } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (isLoading) return // Don't redirect while loading
@@ -34,6 +35,23 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
       return
     }
   }, [isAuthenticated, pathname, router, user, isLoading])
+
+  // Simple toggle function
+  const toggleMobileMenu = () => {
+    console.log('Toggle called, current state:', isMobileMenuOpen)
+    setIsMobileMenuOpen(!isMobileMenuOpen)
+  }
+
+  // Close mobile menu
+  const closeMobileMenu = () => {
+    console.log('Close called')
+    setIsMobileMenuOpen(false)
+  }
+
+  // Close menu when route changes
+  useEffect(() => {
+    closeMobileMenu()
+  }, [pathname])
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -59,8 +77,19 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
   return (
     <>
-      <Header />
-      <Sidebar />
+      {/* Debug indicator */}
+      {/* <div className="fixed top-20 right-4 z-[60] bg-red-500 text-white px-2 py-1 text-xs rounded lg:hidden">
+        Menu: {isMobileMenuOpen ? 'OPEN' : 'CLOSED'}
+      </div> */}
+      
+      <Header 
+        onMobileMenuToggle={toggleMobileMenu}
+        isMobileMenuOpen={isMobileMenuOpen}
+      />
+      <Sidebar 
+        isMobileOpen={isMobileMenuOpen}
+        onMobileClose={closeMobileMenu}
+      />
       <main className="pl-0 lg:ml-64 min-h-screen bg-gray-50">
         <div className="p-3 sm:p-4 md:p-6">
           {children}

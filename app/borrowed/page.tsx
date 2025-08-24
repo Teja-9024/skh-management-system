@@ -17,6 +17,9 @@ interface TransactionData {
   interestType: string
   status: string
   detailedDescription: string
+  // New fields for better separation
+  lenderName: string
+  borrowerName: string
 }
 
 export default function BorrowedMoney() {
@@ -34,6 +37,8 @@ export default function BorrowedMoney() {
     interestType: "No Interest",
     status: "Active/Outstanding",
     detailedDescription: "",
+    lenderName: "",
+    borrowerName: "",
   })
 
   const [transactions, setTransactions] = useState<(TransactionData & { id: string })[]>([
@@ -52,6 +57,8 @@ export default function BorrowedMoney() {
       interestType: "No Interest",
       status: "Active",
       detailedDescription: "",
+      lenderName: "Rajesh",
+      borrowerName: "Dinesh",
     },
     {
       id: "2",
@@ -68,6 +75,8 @@ export default function BorrowedMoney() {
       interestType: "No Interest",
       status: "Active",
       detailedDescription: "",
+      lenderName: "Rajesh",
+      borrowerName: "Dinesh",
     },
   ])
 
@@ -80,9 +89,21 @@ export default function BorrowedMoney() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.personName.trim()) {
-      alert("Please enter person's name")
+    if (formData.transactionType === "borrowed" && !formData.lenderName.trim()) {
+      alert("Please enter lender's name")
       return
+    }
+
+    if (formData.transactionType === "lent" && !formData.borrowerName.trim()) {
+      alert("Please enter borrower's name")
+      return
+    }
+
+    if (formData.transactionType === "repayment") {
+      if (!formData.lenderName.trim() && !formData.borrowerName.trim()) {
+        alert("Please enter both lender and borrower names for repayment")
+        return
+      }
     }
 
     if (formData.amount <= 0) {
@@ -112,6 +133,8 @@ export default function BorrowedMoney() {
       interestType: "No Interest",
       status: "Active/Outstanding",
       detailedDescription: "",
+      lenderName: "",
+      borrowerName: "",
     })
 
     alert("Transaction saved successfully!")
@@ -182,7 +205,7 @@ export default function BorrowedMoney() {
       <div className="bg-white rounded-lg card-shadow p-4 sm:p-6 mb-6">
         <h3 className="text-lg font-semibold mb-6">Transaction Type</h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <div className="border rounded-lg p-4">
             <label className="flex items-start space-x-3 cursor-pointer">
               <input
@@ -280,43 +303,49 @@ export default function BorrowedMoney() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.transactionType === "repayment" ? "Repaying To" : "Source (From Whom)"}
+                {formData.transactionType === "borrowed" ? "Lender's Name" : 
+                 formData.transactionType === "lent" ? "Borrower's Name" : "Lender's Name"}
               </label>
-              <select
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-                value={formData.destination}
-                onChange={(e) => setFormData((prev) => ({ ...prev, destination: e.target.value }))}
-              >
-                {destinations.map((dest) => (
-                  <option key={dest} value={dest}>
-                    {dest}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus mt-2"
-                value={formData.personName}
-                onChange={(e) => setFormData((prev) => ({ ...prev, personName: e.target.value }))}
-                placeholder="Enter name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Person's Full Name</label>
               <input
                 type="text"
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-                value={formData.personName}
-                onChange={(e) => setFormData((prev) => ({ ...prev, personName: e.target.value }))}
+                value={formData.lenderName}
+                onChange={(e) => setFormData((prev) => ({ ...prev, lenderName: e.target.value }))}
                 placeholder={
-                  formData.transactionType === "repayment"
-                    ? "Name of person receiving the repayment"
-                    : "Name of person who received the money"
+                  formData.transactionType === "borrowed" ? "Name of person who lent us money" :
+                  formData.transactionType === "lent" ? "Name of person who borrowed from us" :
+                  "Name of person we're repaying"
                 }
               />
-              <p className="text-xs text-gray-500 mt-1">The individual person involved in this transaction</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.transactionType === "borrowed" ? "The person who lent us money" :
+                 formData.transactionType === "lent" ? "The person who borrowed from us" :
+                 "The person we're repaying"}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {formData.transactionType === "borrowed" ? "Borrower's Name" : 
+                 formData.transactionType === "lent" ? "Lender's Name" : "Borrower's Name"}
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                value={formData.borrowerName}
+                onChange={(e) => setFormData((prev) => ({ ...prev, borrowerName: e.target.value }))}
+                placeholder={
+                  formData.transactionType === "borrowed" ? "Our name (we borrowed)" :
+                  formData.transactionType === "lent" ? "Our name (we lent)" :
+                  "Name of person receiving repayment"
+                }
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.transactionType === "borrowed" ? "Our name (we are the borrower)" :
+                 formData.transactionType === "lent" ? "Our name (we are the lender)" :
+                 "The person receiving the repayment"}
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Contact Information</label>
@@ -439,14 +468,108 @@ export default function BorrowedMoney() {
             <button className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded">Repayments</button>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        
+        {/* Mobile Card View */}
+        <div className="block lg:hidden space-y-4">
+          {transactions.slice(0, 10).map((transaction) => (
+            <div key={transaction.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div className="text-lg font-bold text-blue-600">#{transaction.id}</div>
+                <span
+                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    transaction.transactionType === "borrowed"
+                      ? "bg-red-100 text-red-800"
+                      : transaction.transactionType === "lent"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-green-100 text-green-800"
+                  }`}
+                >
+                  {transaction.transactionType.charAt(0).toUpperCase() + transaction.transactionType.slice(1)}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <div className="font-medium text-gray-500">Date</div>
+                  <div className="font-semibold">{new Date(transaction.date).toLocaleDateString("en-IN")}</div>
+                </div>
+                <div>
+                  <div className="font-medium text-gray-500">Amount</div>
+                  <div className="text-lg font-bold text-gray-900">₹{transaction.amount.toLocaleString("en-IN")}</div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="font-medium text-gray-500 mb-1">Lender</div>
+                <div className="font-semibold text-gray-800">{transaction.lenderName}</div>
+              </div>
+              
+              <div>
+                <div className="font-medium text-gray-500 mb-1">Borrower</div>
+                <div className="font-semibold text-gray-800">{transaction.borrowerName}</div>
+              </div>
+              
+              <div>
+                <div className="font-medium text-gray-500 mb-1">Purpose</div>
+                <div className="font-semibold text-gray-800">{transaction.primaryPurpose}</div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <div className="font-medium text-gray-500">Payment Method</div>
+                  <div className="font-semibold">💳 {transaction.paymentMethod}</div>
+                </div>
+                <div>
+                  <div className="font-medium text-gray-500">Status</div>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                    transaction.status === "Active/Outstanding" || transaction.status === "Active"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : transaction.status === "Completed"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                  }`}>
+                    {transaction.status === "Active/Outstanding" || transaction.status === "Active" ? "⏳ Active" :
+                     transaction.status === "Completed" ? "✅ Completed" : "❌ " + (transaction.status || "Active")}
+                  </span>
+                </div>
+              </div>
+              
+              {transaction.contactInfo && (
+                <div>
+                  <div className="font-medium text-gray-500 mb-1">Contact</div>
+                  <div className="text-sm text-blue-600">📞 {transaction.contactInfo}</div>
+                </div>
+              )}
+              
+              {transaction.expectedReturnDate && (
+                <div>
+                  <div className="font-medium text-gray-500 mb-1">Expected Return</div>
+                  <div className="text-sm text-gray-600">📅 {new Date(transaction.expectedReturnDate).toLocaleDateString("en-IN")}</div>
+                </div>
+              )}
+              
+              {transaction.interestRate > 0 && (
+                <div>
+                  <div className="font-medium text-gray-500 mb-1">Interest</div>
+                  <div className="text-sm text-gray-600">💹 {transaction.interestRate}% {transaction.interestType}</div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Source/Destination
+                  Lender
+                </th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Borrower
                 </th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
@@ -464,7 +587,7 @@ export default function BorrowedMoney() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {transactions.slice(0, 10).map((transaction) => (
-                <tr key={transaction.id}>
+                <tr key={transaction.id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(transaction.date).toLocaleDateString("en-IN")}
                   </td>
@@ -482,8 +605,10 @@ export default function BorrowedMoney() {
                     </span>
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div>{transaction.personName}</div>
-                    <div className="text-xs text-gray-500">{transaction.destination}</div>
+                    <div>{transaction.lenderName}</div>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div>{transaction.borrowerName}</div>
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     ₹{transaction.amount.toLocaleString("en-IN")}

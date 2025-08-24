@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useApi } from "@/hooks/use-api"
+import { exportToPDF } from "@/utils/exportToPDF"
+import { exportToExcel } from "@/utils/exportToExcel"
 
 interface ReportFilters {
   reportType: string
@@ -174,76 +176,94 @@ export default function ReportsAnalysis() {
     return (
       <div className="w-full">
         {/* Mobile Card View */}
-        {/* <div className="block sm:hidden space-y-4">
-          {data.map((bill: any, index: number) => (
-            <div key={bill.id || index} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-              <div className="flex justify-between items-start">
-                <div className="text-lg font-bold text-blue-600">#{bill.billNumber || (index + 1)}</div>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                  ✅ Completed
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <div className="font-medium text-gray-500">Date</div>
-                  <div className="font-semibold">{new Date(bill.date).toLocaleDateString("en-IN")}</div>
-                  <div className="text-xs text-gray-400">{new Date(bill.date).toLocaleDateString("en-IN", { weekday: 'short' })}</div>
+        <div className="block lg:hidden space-y-4">
+          {data.map((bill: any, index: number) => {
+            const billItems = bill.items || []
+            const totalProfit = billItems.reduce((sum: number, item: any) => {
+              const purchaseCode = item.purchaseCode || ""
+              const decoded = decodePurchaseCode(purchaseCode)
+              const purchasePrice = decoded.valid ? decoded.value : 0
+              const salePrice = item.salePrice || 0
+              const quantity = item.quantity || 1
+              const itemProfit = (salePrice - purchasePrice) * quantity
+              return sum + itemProfit
+            }, 0)
+
+            return (
+              <div key={bill.id || index} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="text-lg font-bold text-blue-600">#{bill.billNumber || (index + 1)}</div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                    ✅ Completed
+                  </span>
                 </div>
-                <div>
-                  <div className="font-medium text-gray-500">Total Amount</div>
-                  <div className="text-lg font-bold text-green-600">₹{(bill.totalAmount || 0).toLocaleString("en-IN")}</div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="font-medium text-gray-500 mb-1">Customer</div>
-                <div className="font-semibold text-gray-800">{bill.customer?.name || bill.customerName || "N/A"}</div>
-                {bill.customer?.mobile && (
-                  <div className="text-sm text-blue-600">📱 {bill.customer.mobile}</div>
-                )}
-                {bill.sellerName && (
-                  <div className="text-sm text-gray-600">Seller: {bill.sellerName}</div>
-                )}
-              </div>
-              
-              <div>
-                <div className="font-medium text-gray-500 mb-1">Items</div>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                  📦 {(bill.items || []).length} items
-                </span>
-                {(bill.items || []).slice(0, 2).map((item: any, idx: number) => (
-                  <div key={idx} className="text-sm text-gray-600 mt-1">
-                    • {item.productName || item.product?.name} (Qty: {item.quantity})
-                  </div>
-                ))}
-                {(bill.items || []).length > 2 && (
-                  <div className="text-sm text-gray-500 mt-1">+{(bill.items || []).length - 2} more items</div>
-                )}
-              </div>
-              
-              {(bill.cashPayment > 0 || bill.onlinePayment > 0) && (
+                
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  {bill.cashPayment > 0 && (
-                    <div>
-                      <div className="font-medium text-gray-500">Cash Payment</div>
-                      <div className="font-semibold">₹{bill.cashPayment.toLocaleString("en-IN")}</div>
-                    </div>
+                  <div>
+                    <div className="font-medium text-gray-500">Date</div>
+                    <div className="font-semibold">{new Date(bill.date).toLocaleDateString("en-IN")}</div>
+                    <div className="text-xs text-gray-400">{new Date(bill.date).toLocaleDateString("en-IN", { weekday: 'short' })}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-500">Total Amount</div>
+                    <div className="text-lg font-bold text-green-600">₹{(bill.totalAmount || 0).toLocaleString("en-IN")}</div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-gray-500 mb-1">Customer</div>
+                  <div className="font-semibold text-gray-800">{bill.customer?.name || bill.customerName || "N/A"}</div>
+                  {bill.customer?.mobile && (
+                    <div className="text-sm text-blue-600">📱 {bill.customer.mobile}</div>
                   )}
-                  {bill.onlinePayment > 0 && (
-                    <div>
-                      <div className="font-medium text-gray-500">Online Payment</div>
-                      <div className="font-semibold">₹{bill.onlinePayment.toLocaleString("en-IN")}</div>
-                    </div>
+                  {bill.sellerName && (
+                    <div className="text-sm text-gray-600">Seller: {bill.sellerName}</div>
                   )}
                 </div>
-              )}
-            </div>
-          ))}
-        </div> */}
+                
+                <div>
+                  <div className="font-medium text-gray-500 mb-1">Items & Profit</div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                    📦 {(bill.items || []).length} items
+                  </span>
+                  {(bill.items || []).slice(0, 2).map((item: any, idx: number) => {
+                    const purchaseCode = item.purchaseCode || ""
+                    const decoded = decodePurchaseCode(purchaseCode)
+                    const purchasePrice = decoded.valid ? decoded.value : 0
+                    const salePrice = item.salePrice || 0
+                    const quantity = item.quantity || 1
+                    const itemProfit = (salePrice - purchasePrice) * quantity
+                    
+                    return (
+                      <div key={idx} className="text-sm text-gray-600 mt-1 border-l-2 border-gray-200 pl-2">
+                        <div>• {item.productName || item.product?.name} (Qty: {item.quantity})</div>
+                        <div className="text-xs text-gray-500">
+                          Sale: ₹{salePrice.toFixed(2)} | Purchase: ₹{purchasePrice.toFixed(2)} | 
+                          <span className={`font-bold ${itemProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            Profit: ₹{itemProfit.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {(bill.items || []).length > 2 && (
+                    <div className="text-sm text-gray-500 mt-1">+{(bill.items || []).length - 2} more items</div>
+                  )}
+                </div>
+                
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 mb-1">Total Profit Summary</div>
+                  <div className={`text-lg font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ₹{totalProfit.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
 
         {/* Desktop Table View */}
-        <div className=" w-full overflow-x-auto border border-gray-200 rounded-lg">
+        <div className="hidden lg:block w-full overflow-x-auto border border-gray-200 rounded-lg">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
               <tr>
@@ -260,6 +280,15 @@ export default function ReportsAnalysis() {
                   Items
                 </th>
                 <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200">
+                  Sale Price
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200">
+                  Purchase Price
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200">
+                  Profit
+                </th>
+                <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200">
                   Total Amount
                 </th>
                 <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200">
@@ -268,55 +297,113 @@ export default function ReportsAnalysis() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((bill: any, index: number) => (
-                <tr key={bill.id || index} className="hover:bg-blue-50 transition-colors duration-150">
-                  <td className="px-4 py-4 text-sm font-bold text-blue-600 border-r border-gray-100">
-                    #{bill.billNumber || (index + 1)}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
-                    <div className="font-medium">{new Date(bill.date).toLocaleDateString("en-IN")}</div>
-                    <div className="text-xs text-gray-500">{new Date(bill.date).toLocaleDateString("en-IN", { weekday: 'short' })}</div>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
-                    <div className="font-semibold text-gray-800">{bill.customer?.name || bill.customerName || "N/A"}</div>
-                    {bill.customer?.mobile && (
-                      <div className="text-xs text-blue-600 font-medium">📱 {bill.customer.mobile}</div>
-                    )}
-                    {bill.sellerName && (
-                      <div className="text-xs text-gray-500">Seller: {bill.sellerName}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                        📦 {(bill.items || []).length} items
-                      </span>
-                    </div>
-                    {(bill.items || []).slice(0, 2).map((item: any, idx: number) => (
-                      <div key={idx} className="text-xs text-gray-600 mt-1">
-                        • {item.productName || item.product?.name} (Qty: {item.quantity})
+              {data.map((bill: any, index: number) => {
+                // Calculate profit for each bill
+                const billItems = bill.items || []
+                const totalProfit = billItems.reduce((sum: number, item: any) => {
+                  const purchaseCode = item.purchaseCode || ""
+                  // Decode purchase code to get purchase price
+                  const decoded = decodePurchaseCode(purchaseCode)
+                  const purchasePrice = decoded.valid ? decoded.value : 0
+                  const salePrice = item.salePrice || 0
+                  const quantity = item.quantity || 1
+                  const itemProfit = (salePrice - purchasePrice) * quantity
+                  return sum + itemProfit
+                }, 0)
+
+                return (
+                  <tr key={bill.id || index} className="hover:bg-blue-50 transition-colors duration-150">
+                    <td className="px-4 py-4 text-sm font-bold text-blue-600 border-r border-gray-100">
+                      #{bill.billNumber || (index + 1)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
+                      <div className="font-medium">{new Date(bill.date).toLocaleDateString("en-IN")}</div>
+                      <div className="text-xs text-gray-500">{new Date(bill.date).toLocaleDateString("en-IN", { weekday: 'short' })}</div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
+                      <div className="font-semibold text-gray-800">{bill.customer?.name || bill.customerName || "N/A"}</div>
+                      {bill.customer?.mobile && (
+                        <div className="text-xs text-blue-600 font-medium">📱 {bill.customer.mobile}</div>
+                      )}
+                      {bill.sellerName && (
+                        <div className="text-xs text-gray-500">Seller: {bill.sellerName}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
+                      <div className="flex items-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                          📦 {(bill.items || []).length} items
+                        </span>
                       </div>
-                    ))}
-                    {(bill.items || []).length > 2 && (
-                      <div className="text-xs text-gray-500 mt-1">+{(bill.items || []).length - 2} more items</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-sm font-bold text-green-600 border-r border-gray-100">
-                    <div className="text-lg">₹{(bill.totalAmount || 0).toLocaleString("en-IN")}</div>
-                    {bill.cashPayment > 0 && (
-                      <div className="text-xs text-gray-500">Cash: ₹{bill.cashPayment.toLocaleString("en-IN")}</div>
-                    )}
-                    {bill.onlinePayment > 0 && (
-                      <div className="text-xs text-gray-500">Online: ₹{bill.onlinePayment.toLocaleString("en-IN")}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-sm">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                      ✅ Completed
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                      {(bill.items || []).slice(0, 2).map((item: any, idx: number) => (
+                        <div key={idx} className="text-xs text-gray-600 mt-1">
+                          • {item.productName || item.product?.name} (Qty: {item.quantity})
+                        </div>
+                      ))}
+                      {(bill.items || []).length > 2 && (
+                        <div className="text-xs text-gray-500 mt-1">+{(bill.items || []).length - 2} more items</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
+                      <div className="text-sm font-medium">
+                        {billItems.map((item: any, idx: number) => (
+                          <div key={idx} className="text-xs">
+                            ₹{(item.salePrice || 0).toFixed(2)} × {item.quantity || 1}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900 border-r border-gray-100">
+                      <div className="text-sm font-medium">
+                        {billItems.map((item: any, idx: number) => {
+                          const purchaseCode = item.purchaseCode || ""
+                          const decoded = decodePurchaseCode(purchaseCode)
+                          const purchasePrice = decoded.valid ? decoded.value : 0
+                          return (
+                            <div key={idx} className="text-xs">
+                              ₹{purchasePrice.toFixed(2)} × {item.quantity || 1}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm border-r border-gray-100">
+                      <div className="text-sm font-medium">
+                        {billItems.map((item: any, idx: number) => {
+                          const purchaseCode = item.purchaseCode || ""
+                          const decoded = decodePurchaseCode(purchaseCode)
+                          const purchasePrice = decoded.valid ? decoded.value : 0
+                          const salePrice = item.salePrice || 0
+                          const quantity = item.quantity || 1
+                          const itemProfit = (salePrice - purchasePrice) * quantity
+                          return (
+                            <div key={idx} className={`text-xs font-bold ${itemProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              ₹{itemProfit.toFixed(2)}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className={`text-sm font-bold mt-1 ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        Total: ₹{totalProfit.toFixed(2)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm font-bold text-green-600 border-r border-gray-100">
+                      <div className="text-lg">₹{(bill.totalAmount || 0).toLocaleString("en-IN")}</div>
+                      {bill.cashPayment > 0 && (
+                        <div className="text-xs text-gray-500">Cash: ₹{bill.cashPayment.toLocaleString("en-IN")}</div>
+                      )}
+                      {bill.onlinePayment > 0 && (
+                        <div className="text-xs text-gray-500">Online: ₹{bill.onlinePayment.toLocaleString("en-IN")}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-sm">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                        ✅ Completed
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -1107,7 +1194,54 @@ export default function ReportsAnalysis() {
           </div>
         ) : (
           <>
-            <h3 className="text-lg font-semibold mb-4">{filters.reportType} Results</h3>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+              <h3 className="text-lg font-semibold mb-4 sm:mb-0">{filters.reportType} Results</h3>
+              
+              {/* Download Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => {
+                    const data = getFilteredData()
+                    const columns = getColumnsForReport()
+                    const columnLabels = getColumnLabelsForReport()
+                    const currencyColumns = getCurrencyColumnsForReport()
+                    
+                    exportToPDF({
+                      title: `${filters.reportType} Report`,
+                      dateRange: `${filters.fromDate ? `From: ${filters.fromDate}` : ''} ${filters.toDate ? `To: ${filters.toDate}` : ''}`.trim() || 'All Time',
+                      columns,
+                      data,
+                      columnLabels,
+                      currencyColumns,
+                      orientation: 'landscape'
+                    })
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  📄 Download PDF
+                </button>
+                <button
+                  onClick={() => {
+                    const data = getFilteredData()
+                    const columns = getColumnsForReport()
+                    const columnLabels = getColumnLabelsForReport()
+                    const currencyColumns = getCurrencyColumnsForReport()
+                    
+                    exportToExcel({
+                      title: `${filters.reportType} Report`,
+                      dateRange: `${filters.fromDate ? `From: ${filters.fromDate}` : ''} ${filters.toDate ? `To: ${filters.toDate}` : ''}`.trim() || 'All Time',
+                      columns,
+                      data,
+                      columnLabels,
+                      currencyColumns
+                    })
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  📊 Download Excel
+                </button>
+              </div>
+            </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -1164,4 +1298,71 @@ export default function ReportsAnalysis() {
       </div>
     </div>
   )
+
+  // Helper functions for export
+  function getColumnsForReport(): string[] {
+    switch (filters.reportType) {
+      case "Billing":
+        return ["billNumber", "date", "customerName", "items", "totalAmount", "status"]
+      case "Purchase":
+        return ["purchaseDate", "productName", "supplierName", "quantity", "totalValue", "stockStatus"]
+      case "Borrowed":
+        return ["date", "transactionType", "personName", "primaryPurpose", "amount", "status"]
+      case "Expenses":
+        return ["date", "expenseType", "expenseCategory", "amount", "paymentType", "remarks"]
+      default:
+        return ["date", "type", "description", "amount", "category", "status"]
+    }
+  }
+
+  function getColumnLabelsForReport(): string[] {
+    switch (filters.reportType) {
+      case "Billing":
+        return ["Bill #", "Date", "Customer", "Items", "Total Amount", "Status"]
+      case "Purchase":
+        return ["Purchase Date", "Product", "Supplier", "Quantity", "Total Value", "Stock Status"]
+      case "Borrowed":
+        return ["Date", "Type", "Person", "Purpose", "Amount", "Status"]
+      case "Expenses":
+        return ["Date", "Expense Type", "Category", "Amount", "Payment Method", "Remarks"]
+      default:
+        return ["Date", "Transaction Type", "Description", "Amount", "Category", "Status"]
+    }
+  }
+
+  function getCurrencyColumnsForReport(): string[] {
+    switch (filters.reportType) {
+      case "Billing":
+        return ["totalAmount"]
+      case "Purchase":
+        return ["totalValue"]
+      case "Borrowed":
+        return ["amount"]
+      case "Expenses":
+        return ["amount"]
+      default:
+        return ["amount", "totalAmount", "totalValue"]
+    }
+  }
+
+  // Helper function to decode purchase codes (same as in billing page)
+  function decodePurchaseCode(raw: string): { value: number; valid: boolean } {
+    const CODE_MAP: Record<string, string> = {
+      D: "1", I: "2", N: "3", E: "4", S: "5", H: "6", J: "7", A: "8", T: "9", P: "0",
+    }
+    
+    const code = raw.toUpperCase().replace(/\s+/g, "")
+    if (!code) return { value: 0, valid: false }
+
+    let out = ""
+    for (const ch of code) {
+      if (!(ch in CODE_MAP)) {
+        return { value: 0, valid: false }
+      }
+      out += CODE_MAP[ch]
+    }
+
+    const num = out.replace(/^0+/, "") || "0"
+    return { value: Number(num), valid: true }
+  }
 }
