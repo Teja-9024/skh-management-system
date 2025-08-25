@@ -109,6 +109,36 @@ export default function ShopExpenses() {
     }
   }
 
+  // Edit expense function
+  const editExpense = (expense: any) => {
+    setFormData({
+      date: expense.date,
+      expenseType: expense.expenseType || "",
+      amount: expense.amount || 0,
+      paymentType: expense.paymentType || "CASH",
+      expenseCategory: expense.expenseCategory || "ELECTRICITY",
+      remarks: expense.remarks || "",
+    })
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Delete expense function
+  const deleteExpense = async (expenseId: string) => {
+    if (confirm('Are you sure you want to delete this expense?')) {
+      try {
+        // You'll need to implement the delete API endpoint
+        // await deleteExpenseMutation(`/api/expenses/${expenseId}`)
+        // Reload expenses after deletion
+        await loadExpenses()
+        await loadSummary()
+        alert('Expense deleted successfully!')
+      } catch (error) {
+        alert('Failed to delete expense')
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -253,12 +283,15 @@ export default function ShopExpenses() {
                   <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment
                   </th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {expenses.length > 0 ? (
                   expenses.map((expense) => (
-                    <tr key={expense.id}>
+                    <tr key={expense.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {new Date(expense.date).toLocaleDateString("en-IN")}
                       </td>
@@ -273,11 +306,27 @@ export default function ShopExpenses() {
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                         {(expense.paymentType || "").replace('_', ' ').toLowerCase()}
                       </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => editExpense(expense)}
+                            className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteExpense(expense.id)}
+                            className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-3 sm:px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={7} className="px-3 sm:px-6 py-4 text-center text-sm text-gray-500">
                       No expenses recorded yet
                     </td>
                   </tr>

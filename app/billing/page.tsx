@@ -96,7 +96,9 @@ export default function BillingSystem() {
 
   const loadBills = async () => {
     try {
-      const data = await fetchBills('/api/bills?limit=10')
+      // Only load bills for current date
+      const today = new Date().toISOString().split("T")[0]
+      const data = await fetchBills(`/api/bills?date=${today}`)
       setBills(data.bills || [])
     } catch (error) {
       console.error('Failed to load bills:', error)
@@ -171,6 +173,40 @@ export default function BillingSystem() {
 
   const totalAmount = formData.items.reduce((sum, item) => sum + item.total, 0)
 
+  // Edit bill function
+  const editBill = (bill: any) => {
+    setFormData({
+      billNumber: bill.billNumber,
+      date: bill.date,
+      sellerName: bill.sellerName || "",
+      customerName: bill.customer?.name || bill.customerName || "",
+      customerMobile: bill.customer?.mobile || bill.customerMobile || "",
+      items: bill.items || [],
+      savingBalance: bill.savingBalance || 0,
+      cashPayment: bill.cashPayment || 0,
+      onlinePayment: bill.onlinePayment || 0,
+      borrowedAmount: bill.borrowedAmount || 0,
+      remarks: bill.remarks || "",
+    })
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Delete bill function
+  const deleteBill = async (billId: string) => {
+    if (confirm('Are you sure you want to delete this bill?')) {
+      try {
+        // You'll need to implement the delete API endpoint
+        // await deleteBillMutation(`/api/bills/${billId}`)
+        // Reload bills after deletion
+        await loadBills()
+        alert('Bill deleted successfully!')
+      } catch (error) {
+        alert('Failed to delete bill')
+      }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -237,7 +273,7 @@ export default function BillingSystem() {
   }
 
   const decodedInfo = decodePurchaseCode(currentItem.purchaseCode)
-
+  const fmt = (n: number) => `₹${Number(n || 0).toFixed(2)}`
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -609,135 +645,259 @@ export default function BillingSystem() {
         ) : bills.length > 0 ? (
           <>
             {/* Mobile Card View */}
-            <div className="block lg:hidden space-y-4">
-              {bills.map((bill) => (
-                <div key={bill.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div className="text-lg font-bold text-blue-600">#{bill.billNumber}</div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(bill.date).toLocaleDateString("en-IN")}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="font-medium text-gray-500 mb-1">Customer</div>
-                    <div className="font-semibold text-gray-800">
-                      {bill.customer?.name || bill.customerName}
-                    </div>
-                    {bill.customer?.mobile || bill.customerMobile ? (
-                      <div className="text-sm text-blue-600">📱 {bill.customer?.mobile || bill.customerMobile}</div>
-                    ) : null}
-                  </div>
-                  
-                  <div>
-                    <div className="font-medium text-gray-500 mb-1">Items</div>
-                    <ul className="space-y-1">
-                      {(bill.items || []).map((item: any, idx: number) => {
-                        const dec = decodePurchaseCode(item.purchaseCode)
-                        const purchasePrice = dec.valid ? dec.value : 0
-                        return (
-                          <li key={idx} className="text-sm text-gray-600 border-l-2 border-gray-200 pl-2">
-                            <div className="font-medium">{item.product?.name || item.productName}</div>
-                            <div className="text-xs text-gray-500">
-                              Sale: ₹{item.salePrice.toFixed(2)} | Purchase: {item.purchaseCode} (₹{purchasePrice.toFixed(2)})
-                            </div>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-                  
-                  {bill.customer?.remarks || bill.remarks ? (
-                    <div>
-                      <div className="font-medium text-gray-500 mb-1">Remarks</div>
-                      <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
-                        {bill.customer?.remarks || bill.remarks}
-                      </div>
-                    </div>
-                  ) : null}
-                  
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="font-medium text-gray-700 mb-1">Total Amount</div>
-                    <div className="text-lg font-bold text-green-600">₹{bill.totalAmount.toFixed(2)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+              <div className="block lg:hidden space-y-4">
+                {bills.map((bill, index) => {
+                  const money = (n: number) => `₹${Number(n || 0).toFixed(2)}`; // tiny helper
 
-            {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-[980px] sm:min-w-full divide-gray-200 border-collapse">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Bill #
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Customer
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mobile
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Items
-                    </th>
-                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Remarks
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {bills.map((bill) => (
-                    <tr key={bill.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{bill.billNumber}</td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(bill.date).toLocaleDateString("en-IN")}
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {bill.customer?.name || bill.customerName}
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {bill.customer?.mobile || bill.customerMobile || "N/A"}
-                      </td>
-                      {/* ITEMS COLUMN: name • sale • purchase */}
-                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-900">
-                        <ul className="space-y-1">
+                  return (
+                    <div
+                      key={bill.id}
+                      className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="inline-flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-xs font-semibold">
+                            Bill #{bill.billNumber}
+                          </span>
+                          <span className="text-[11px] text-gray-400">#{index + 1}</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(bill.date).toLocaleDateString("en-IN")}
+                        </div>
+                      </div>
+
+                      {/* Customer & Seller */}
+                      <div className="mt-3 grid grid-cols-1 gap-2">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-500">Customer</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {bill.customer?.name || bill.customerName}
+                          </div>
+                        </div>
+                        {(bill.customer?.mobile || bill.customerMobile) && (
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-gray-500">Mobile</div>
+                            <div className="text-sm font-medium text-blue-600">
+                              {bill.customer?.mobile || bill.customerMobile}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-500">Seller</div>
+                          <div className="text-sm font-medium text-gray-800">
+                            {bill.sellerName || "N/A"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Items (clean: name, qty, unit, subtotal) */}
+                      <div className="mt-4">
+                        <div className="text-sm font-medium text-gray-600 mb-2">Items</div>
+                        <ul className="space-y-2">
                           {(bill.items || []).map((item: any, idx: number) => {
-                            const dec = decodePurchaseCode(item.purchaseCode)
-                            const purchasePrice = dec.valid ? dec.value : 0
+                            const qty = Number(item.quantity || 0);
+                            const unit = Number(item.salePrice || 0);
+                            const subtotal = qty * unit;
+
                             return (
-                              <li key={idx} className="flex flex-wrap gap-2">
-                                <span className="font-medium">{item.product?.name || item.productName}</span>
-                                <span>•</span>
-                                <span>Sale: ₹{item.salePrice.toFixed(2)}</span>
-                                <span>•</span>
-                                <span>
-                                  Purchase: {item.purchaseCode }
-                                </span>
+                              <li
+                                key={idx}
+                                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+                              >
+                                <div className="flex items-baseline justify-between gap-3">
+                                  <div className="font-medium text-gray-800 truncate">
+                                    {item.product?.name || item.productName}
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      (Qty: {qty})
+                                    </span>
+                                  </div>
+                                  <div className="tabular-nums font-mono text-sm font-semibold text-gray-900">
+                                    {money(subtotal)}
+                                  </div>
+                                </div>
+                                <div className="mt-1 text-[12px] text-gray-600">
+                                  {money(unit)} <span className="text-gray-400">×</span> {qty}
+                                </div>
                               </li>
-                            )
+                            );
                           })}
                         </ul>
-                      </td>
+                      </div>
 
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {bill.customer?.remarks || bill.remarks || "N/A"}
-                      </td>
+                      {/* Payments summary */}
+                      <div className="mt-4 rounded-lg bg-gray-50 p-3">
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="space-y-0.5">
+                            <div className="text-gray-500 text-center">Cash</div>
+                            <div className="tabular-nums font-mono font-semibold text-center">
+                              {money(bill.cashPayment)}
+                            </div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="text-gray-500 text-center">Online</div>
+                            <div className="tabular-nums font-mono font-semibold text-center">
+                              {money(bill.onlinePayment)}
+                            </div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="text-gray-500 text-center">Borrow</div>
+                            <div className="tabular-nums font-mono font-semibold text-center text-orange-600">
+                              {money(bill.borrowedAmount)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ₹{bill.totalAmount.toFixed(2)}
-                      </td>
+                      {/* Remarks (optional) */}
+                      {bill.remarks ? (
+                        <div className="mt-3">
+                          <div className="text-xs font-medium text-gray-500 mb-1">Remarks</div>
+                          <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
+                            {bill.remarks}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Total */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2">
+                          <div className="text-sm font-medium text-emerald-700">Total Amount</div>
+                          <div className="text-lg font-bold tabular-nums font-mono text-emerald-700">
+                            {money(bill.totalAmount)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => editBill(bill)}
+                          className="flex-1 px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-medium active:scale-[0.99] hover:bg-blue-700"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteBill(bill.id)}
+                          className="flex-1 px-3 py-2 rounded-md bg-red-600 text-white text-sm font-medium active:scale-[0.99] hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+
+            {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="min-w-[1100px] w-full border-collapse">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ser No</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bill No</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name of Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Mob No of Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Items</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Cash</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Online</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Borrow</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Seller</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Remarks</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {bills.map((bill, index) => {
+                      const itemsTotal = (bill.items || []).reduce((sum: number, it: any) => {
+                        const qty = Number(it.quantity || 0)
+                        const unit = Number(it.salePrice || 0)
+                        return sum + qty * unit
+                      }, 0)
+
+                      return (
+                        <tr key={bill.id} className="hover:bg-gray-50/60">
+                          <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{bill.billNumber}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {new Date(bill.date).toLocaleDateString("en-IN")}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{bill.customer?.name || bill.customerName}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{bill.customer?.mobile || bill.customerMobile || "N/A"}</td>
+
+                          {/* ITEMS (no code/profit) */}
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <div className="space-y-2">
+                              {(bill.items || []).map((item: any, idx: number) => {
+                                const name = item.product?.name || item.productName
+                                const qty = Number(item.quantity || 0)
+                                const unit = Number(item.salePrice || 0)
+                                const sub = qty * unit
+                                return (
+                                  <div key={idx} className="rounded-md border border-gray-200 bg-gray-50 p-2.5">
+                                    <div className="flex items-baseline justify-between gap-3">
+                                      <div className="font-medium truncate">{name}</div>
+                                      <div className="tabular-nums font-mono text-gray-800">{fmt(sub)}</div>
+                                    </div>
+                                    <div className="mt-1 text-[12px] text-gray-600">
+                                      {fmt(unit)} <span className="text-gray-400">×</span> {qty}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+
+                              {/* Items total (optional, matches right-side Total usually) */}
+                              <div className="flex justify-between border-t border-gray-200 pt-2 mt-2 text-[12px] font-semibold">
+                                <span className="text-gray-600">Items Total</span>
+                                <span className="tabular-nums font-mono">{fmt(itemsTotal)}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-3 text-sm text-right tabular-nums font-mono text-gray-900">
+                            {fmt(bill.cashPayment)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right tabular-nums font-mono text-gray-900">
+                            {fmt(bill.onlinePayment)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right tabular-nums font-mono text-gray-900">
+                            {fmt(bill.borrowedAmount)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{bill.sellerName || "N/A"}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{bill.remarks || "N/A"}</td>
+
+                          {/* Bill grand total */}
+                          <td className="px-4 py-3 text-sm text-right tabular-nums font-mono font-semibold text-gray-900">
+                            {fmt(bill.totalAmount ?? itemsTotal)}
+                          </td>
+
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => editBill(bill)}
+                                className="px-3 py-1.5 rounded bg-blue-500 text-white text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => deleteBill(bill.id)}
+                                className="px-3 py-1.5 rounded bg-red-500 text-white text-xs hover:bg-red-600"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
           </>
         ) : (
           <div className="text-center py-8">

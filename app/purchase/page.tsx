@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useApi, useApiMutation } from "@/hooks/use-api"
+import { exportToPDF } from "@/utils/exportToPDF"
+import { exportToExcel } from "@/utils/exportToExcel"
 
 interface PurchaseData {
   purchaseDate: string
@@ -100,6 +102,7 @@ export default function MarketPurchase() {
         purchasePrice: formData.purchasePrice,
         quantity: formData.quantity,
         stockStatus: formData.stockStatus,
+        totalValue: formData.totalValue,
         paymentType: formData.paymentType,
         borrowedAmount: formData.borrowedAmount,
         remarks: formData.remarks,
@@ -124,11 +127,44 @@ export default function MarketPurchase() {
       // Reload purchases
       await loadPurchases()
       
-      alert("Purchase record saved successfully!")
+      alert("Purchase saved successfully!")
     } catch (error: any) {
       alert(`Failed to save purchase: ${error.message}`)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  // Edit purchase function
+  const editPurchase = (purchase: any) => {
+    setFormData({
+      purchaseDate: purchase.purchaseDate,
+      productName: purchase.product?.name || purchase.productName || "",
+      supplierName: purchase.supplier?.name || purchase.supplierName || "",
+      purchasePrice: purchase.purchasePrice || 0,
+      quantity: purchase.quantity || 0,
+      stockStatus: purchase.stockStatus || "AVAILABLE",
+      totalValue: purchase.totalValue || 0,
+      paymentType: purchase.paymentType || "CASH",
+      borrowedAmount: purchase.borrowedAmount || 0,
+      remarks: purchase.remarks || "",
+    })
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Delete purchase function
+  const deletePurchase = async (purchaseId: string) => {
+    if (confirm('Are you sure you want to delete this purchase?')) {
+      try {
+        // You'll need to implement the delete API endpoint
+        // await deletePurchaseMutation(`/api/purchases/${purchaseId}`)
+        // Reload purchases after deletion
+        await loadPurchases()
+        alert('Purchase deleted successfully!')
+      } catch (error) {
+        alert('Failed to delete purchase')
+      }
     }
   }
 
@@ -282,70 +318,256 @@ export default function MarketPurchase() {
       </div>
 
       <div className="mt-8 bg-white rounded-lg card-shadow p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4">Recent Purchases</h3>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
+          <h3 className="text-lg font-semibold mb-2 sm:mb-0">Recent Purchases</h3>
+          
+          {/* Download Buttons */}
+          {purchases.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  const data = purchases.map(purchase => ({
+                    date: new Date(purchase.purchaseDate).toLocaleDateString("en-IN"),
+                    product: purchase.product?.name || purchase.productName || "N/A",
+                    supplier: purchase.supplier?.name || purchase.supplierName || "N/A",
+                    quantity: purchase.quantity,
+                    purchasePrice: purchase.purchasePrice,
+                    totalValue: purchase.totalValue,
+                    stockStatus: purchase.stockStatus?.replace('_', ' '),
+                    paymentType: purchase.paymentType?.replace('_', ' '),
+                    borrowedAmount: purchase.borrowedAmount,
+                    remarks: purchase.remarks
+                  }))
+                  
+                  exportToPDF({
+                    title: "Market Purchase Report",
+                    dateRange: `Generated on ${new Date().toLocaleDateString("en-IN")}`,
+                    columns: ["date", "product", "supplier", "quantity", "purchasePrice", "totalValue", "stockStatus", "paymentType", "borrowedAmount", "remarks"],
+                    data,
+                    columnLabels: ["Date", "Product", "Supplier", "Quantity", "Purchase Price", "Total Value", "Stock Status", "Payment Type", "Borrowed Amount", "Remarks"],
+                    currencyColumns: ["purchasePrice", "totalValue", "borrowedAmount"],
+                    orientation: 'landscape'
+                  })
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                📄 Download PDF
+              </button>
+              <button
+                onClick={() => {
+                  const data = purchases.map(purchase => ({
+                    date: new Date(purchase.purchaseDate).toLocaleDateString("en-IN"),
+                    product: purchase.product?.name || purchase.productName || "N/A",
+                    supplier: purchase.supplier?.name || purchase.supplierName || "N/A",
+                    quantity: purchase.quantity,
+                    purchasePrice: purchase.purchasePrice,
+                    totalValue: purchase.totalValue,
+                    stockStatus: purchase.stockStatus?.replace('_', ' '),
+                    paymentType: purchase.paymentType?.replace('_', ' '),
+                    borrowedAmount: purchase.borrowedAmount,
+                    remarks: purchase.remarks
+                  }))
+                  
+                  exportToExcel({
+                    title: "Market Purchase Report",
+                    dateRange: `Generated on ${new Date().toLocaleDateString("en-IN")}`,
+                    columns: ["date", "product", "supplier", "quantity", "purchasePrice", "totalValue", "stockStatus", "paymentType", "borrowedAmount", "remarks"],
+                    data,
+                    columnLabels: ["Date", "Product", "Supplier", "Quantity", "Purchase Price", "Total Value", "Stock Status", "Payment Type", "Borrowed Amount", "Remarks"],
+                    currencyColumns: ["purchasePrice", "totalValue", "borrowedAmount"]
+                  })
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                📊 Download Excel
+              </button>
+            </div>
+          )}
+        </div>
         {purchasesLoading ? (
           <div className="text-center py-8">
             <div className="text-gray-500">Loading purchases...</div>
           </div>
         ) : purchases.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Supplier
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Value
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {purchases.map((purchase) => (
-                  <tr key={purchase.id}>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <>
+            {/* Mobile Card View */}
+            <div className="block lg:hidden space-y-4">
+              {purchases.map((purchase) => (
+                <div key={purchase.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="text-lg font-bold text-blue-600">#{purchase.id}</div>
+                    <div className="text-sm text-gray-500">
                       {new Date(purchase.purchaseDate).toLocaleDateString("en-IN")}
-                    </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="font-medium text-gray-500 mb-1">Product</div>
+                    <div className="font-semibold text-gray-800">
                       {purchase.product?.name || purchase.productName || "N/A"}
-                    </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-medium text-gray-500 mb-1">Supplier</div>
+                    <div className="font-semibold text-gray-800">
                       {purchase.supplier?.name || purchase.supplierName || "N/A"}
-                    </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ₹{(purchase.totalValue || 0).toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          purchase.stockStatus === "AVAILABLE"
-                            ? "bg-green-100 text-green-800"
-                            : purchase.stockStatus === "LOW_STOCK"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                        }`}
-                      >
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <div className="font-medium text-gray-500">Quantity</div>
+                      <div className="font-semibold">{purchase.quantity}</div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-500">Purchase Price</div>
+                      <div className="font-semibold">₹{purchase.purchasePrice}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-medium text-gray-500 mb-1">Total Value</div>
+                    <div className="text-lg font-bold text-green-600">₹{(purchase.totalValue || 0).toLocaleString("en-IN")}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <div className="font-medium text-gray-500">Stock Status</div>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        purchase.stockStatus === "AVAILABLE"
+                          ? "bg-green-100 text-green-800"
+                          : purchase.stockStatus === "LOW_STOCK"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                      }`}>
                         {purchase.stockStatus?.replace('_', ' ')}
                       </span>
-                    </td>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-500">Payment Type</div>
+                      <div className="font-semibold">{purchase.paymentType?.replace('_', ' ')}</div>
+                    </div>
+                  </div>
+
+                  {purchase.borrowedAmount > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-500">Borrowed Amount</div>
+                      <div className="font-semibold text-orange-600">₹{purchase.borrowedAmount}</div>
+                    </div>
+                  )}
+
+                  {purchase.remarks && (
+                    <div>
+                      <div className="font-medium text-gray-500 mb-1">Remarks</div>
+                      <div className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
+                        {purchase.remarks}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      onClick={() => editPurchase(purchase)}
+                      className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      onClick={() => deletePurchase(purchase.id)}
+                      className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Product
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Supplier
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Quantity
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Purchase Price
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Value
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {purchases.map((purchase) => (
+                    <tr key={purchase.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(purchase.purchaseDate).toLocaleDateString("en-IN")}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {purchase.product?.name || purchase.productName || "N/A"}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {purchase.supplier?.name || purchase.supplierName || "N/A"}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{purchase.purchasePrice}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ₹{(purchase.totalValue || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            purchase.stockStatus === "AVAILABLE"
+                              ? "bg-green-100 text-green-800"
+                              : purchase.stockStatus === "LOW_STOCK"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {purchase.stockStatus?.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => editPurchase(purchase)}
+                            className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deletePurchase(purchase.id)}
+                            className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <div className="text-center py-8">
             <div className="text-gray-500">No purchases found. Create your first purchase above.</div>

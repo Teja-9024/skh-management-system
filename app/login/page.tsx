@@ -22,8 +22,9 @@ export default function LoginPage() {
 
     try {
       const success = await login(username, password)
+      console.log("success", success)
       if (success) {
-        router.push("/")
+        router.push("/billing")
       } else {
         setError("Invalid username or password")
       }

@@ -153,22 +153,22 @@ export function exportToPDF({
 
 // Helper function to get cell value
 function getCellValue(row: any, col: string, mergeColumns: Record<string, string[]>, currencyColumns: string[]): string {
-  if (mergeColumns && mergeColumns[col]) {
-    return mergeColumns[col]
-      .map(field => {
-        let val = row[field];
-        if (currencyColumns.includes(field) && typeof val === 'number') {
-          return `Rs. ${val.toLocaleString()}`;
-        }
-        return val;
-      })
-      .join(" | ");
-  }
+      if (mergeColumns && mergeColumns[col]) {
+        return mergeColumns[col]
+          .map(field => {
+            let val = row[field];
+            if (currencyColumns.includes(field) && typeof val === 'number') {
+              return `Rs. ${val.toLocaleString()}`;
+            }
+            return val;
+          })
+          .join(" | ");
+      }
   
-  let val = row[col];
-  if (currencyColumns.includes(col) && typeof val === 'number') {
-    return `Rs. ${val.toLocaleString()}`;
-  }
+      let val = row[col];
+      if (currencyColumns.includes(col) && typeof val === 'number') {
+        return `Rs. ${val.toLocaleString()}`;
+      }
   
   return val?.toString() || '';
 }
