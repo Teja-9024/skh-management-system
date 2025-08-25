@@ -1,0 +1,214 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User management
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Customer management
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  mobile    String?
+  address   String?
+  bills     Bill[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("customers")
+}
+
+// Supplier management
+model Supplier {
+  id          String     @id @default(cuid())
+  name        String
+  contactInfo String?
+  purchases   Purchase[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("suppliers")
+}
+
+// Product catalog
+model Product {
+  id        String     @id @default(cuid())
+  name      String
+  category  String?
+  billItems BillItem[]
+  purchases Purchase[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("products")
+}
+
+// Bills and billing
+model Bill {
+  id             String     @id @default(cuid())
+  billNumber     String     @unique
+  date           DateTime
+  customerId     String
+  customer       Customer   @relation(fields: [customerId], references: [id])
+  sellerName     String?
+  items          BillItem[]
+  savingBalance  Float      @default(0)
+  cashPayment    Float      @default(0)
+  onlinePayment  Float      @default(0)
+  borrowedAmount Float      @default(0)
+  totalAmount    Float
+  remarks        String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@map("bills")
+}
+
+model BillItem {
+  id           String   @id @default(cuid())
+  billId       String
+  bill         Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Int
+  salePrice    Float
+  purchaseCode String
+  total        Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("bill_items")
+}
+
+// Purchase management
+model Purchase {
+  id             String      @id @default(cuid())
+  purchaseDate   DateTime
+  productId      String
+  product        Product     @relation(fields: [productId], references: [id])
+  supplierId     String
+  supplier       Supplier    @relation(fields: [supplierId], references: [id])
+  purchasePrice  Float
+  quantity       Int
+  stockStatus    StockStatus
+  totalValue     Float
+  paymentType    PaymentType
+  borrowedAmount Float       @default(0)
+  remarks        String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@map("purchases")
+}
+
+// Expense tracking
+model Expense {
+  id              String          @id @default(cuid())
+  date            DateTime
+  expenseType     String
+  amount          Float
+  paymentType     PaymentType
+  expenseCategory ExpenseCategory
+  remarks         String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("expenses")
+}
+
+// Money transaction tracking
+model MoneyTransaction {
+  id                  String               @id @default(cuid())
+  transactionType     TransactionType
+  date                DateTime
+  amount              Float
+  paymentMethod       PaymentType
+  destination         String
+  personName          String
+  contactInfo         String?
+  primaryPurpose      String
+  expectedReturnDate  DateTime?
+  interestRate        Float                @default(0)
+  interestType        InterestType
+  status              TransactionStatus
+  detailedDescription String?
+  parentTransactionId String?
+  parentTransaction   MoneyTransaction?    @relation("TransactionRepayments", fields: [parentTransactionId], references: [id])
+  repayments          MoneyTransaction[]   @relation("TransactionRepayments")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@map("money_transactions")
+}
+
+// Enums
+enum UserRole {
+  OWNER
+  WORKER
+}
+
+enum StockStatus {
+  AVAILABLE
+  OUT_OF_STOCK
+  LOW_STOCK
+  ORDERED
+}
+
+enum PaymentType {
+  CASH
+  CARD
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+}
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  WATER
+  INTERNET
+  PHONE
+  TRANSPORTATION
+  OFFICE_SUPPLIES
+  MARKETING
+  MAINTENANCE
+  INSURANCE
+  OTHER
+}
+
+enum TransactionType {
+  BORROWED
+  LENT
+  REPAYMENT
+}
+
+enum InterestType {
+  NO_INTEREST
+  SIMPLE_INTEREST
+  COMPOUND_INTEREST
+  FIXED_RATE
+}
+
+enum TransactionStatus {
+  ACTIVE
+  COMPLETED
+  OVERDUE
+  PARTIAL_PAYMENT
+}

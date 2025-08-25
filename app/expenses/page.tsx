@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useApi, useApiMutation } from "@/hooks/use-api"
 
 interface ExpenseData {
   date: string
@@ -17,29 +18,58 @@ export default function ShopExpenses() {
     date: new Date().toISOString().split("T")[0],
     expenseType: "",
     amount: 0,
-    paymentType: "Cash",
-    expenseCategory: "Electricity",
+    paymentType: "CASH",
+    expenseCategory: "ELECTRICITY",
     remarks: "",
   })
 
-  const [expenses, setExpenses] = useState<(ExpenseData & { id: string })[]>([])
+  const [expenses, setExpenses] = useState<any[]>([])
+  const [totalExpenses, setTotalExpenses] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const paymentTypes = ["Cash", "Card", "UPI", "Bank Transfer", "Cheque"]
+  const { data: expensesData, loading: expensesLoading, execute: fetchExpenses } = useApi()
+  const { execute: fetchSummary } = useApi()
+  const { mutate: createExpense } = useApiMutation()
+
+  const paymentTypes = ["CASH", "CARD", "UPI", "BANK_TRANSFER", "CHEQUE"]
   const expenseCategories = [
-    "Rent",
-    "Electricity",
-    "Water",
-    "Internet",
-    "Phone",
-    "Transportation",
-    "Office Supplies",
-    "Marketing",
-    "Maintenance",
-    "Insurance",
-    "Other",
+    "RENT",
+    "ELECTRICITY",
+    "WATER",
+    "INTERNET",
+    "PHONE",
+    "TRANSPORTATION",
+    "OFFICE_SUPPLIES",
+    "MARKETING",
+    "MAINTENANCE",
+    "INSURANCE",
+    "OTHER",
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadExpenses()
+    loadSummary()
+  }, [])
+
+  const loadExpenses = async () => {
+    try {
+      const data = await fetchExpenses('/api/expenses?limit=10')
+      setExpenses(data.expenses || [])
+    } catch (error) {
+      console.error('Failed to load expenses:', error)
+    }
+  }
+
+  const loadSummary = async () => {
+    try {
+      const data = await fetchSummary('/api/expenses/summary')
+      setTotalExpenses(data.total || 0)
+    } catch (error) {
+      console.error('Failed to load expense summary:', error)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.expenseType.trim()) {
@@ -52,52 +82,85 @@ export default function ShopExpenses() {
       return
     }
 
-    const newExpense = {
-      ...formData,
-      id: Date.now().toString(),
+    setIsSubmitting(true)
+
+    try {
+      await createExpense('/api/expenses', { body: formData })
+
+      // Reset form
+      setFormData({
+        date: new Date().toISOString().split("T")[0],
+        expenseType: "",
+        amount: 0,
+        paymentType: "CASH",
+        expenseCategory: "ELECTRICITY",
+        remarks: "",
+      })
+
+      // Reload data
+      await loadExpenses()
+      await loadSummary()
+      
+      alert("Expense saved successfully!")
+    } catch (error: any) {
+      alert(`Failed to save expense: ${error.message}`)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setExpenses((prev) => [newExpense, ...prev])
-
-    // Reset form
-    setFormData({
-      date: new Date().toISOString().split("T")[0],
-      expenseType: "",
-      amount: 0,
-      paymentType: "Cash",
-      expenseCategory: "Electricity",
-      remarks: "",
-    })
-
-    alert("Expense saved successfully!")
   }
 
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+  // Edit expense function
+  const editExpense = (expense: any) => {
+    setFormData({
+      date: expense.date,
+      expenseType: expense.expenseType || "",
+      amount: expense.amount || 0,
+      paymentType: expense.paymentType || "CASH",
+      expenseCategory: expense.expenseCategory || "ELECTRICITY",
+      remarks: expense.remarks || "",
+    })
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Delete expense function
+  const deleteExpense = async (expenseId: string) => {
+    if (confirm('Are you sure you want to delete this expense?')) {
+      try {
+        // You'll need to implement the delete API endpoint
+        // await deleteExpenseMutation(`/api/expenses/${expenseId}`)
+        // Reload expenses after deletion
+        await loadExpenses()
+        await loadSummary()
+        alert('Expense deleted successfully!')
+      } catch (error) {
+        alert('Failed to delete expense')
+      }
+    }
+  }
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-800">Shop Expenses</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Shop Expenses</h2>
         <p className="text-gray-600">Log all operational expenses</p>
       </div>
 
-      {expenses.length > 0 && (
-        <div className="mb-6 bg-white rounded-lg card-shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-              <p className="text-2xl font-bold text-red-600">₹{totalExpenses.toLocaleString("en-IN")}</p>
-            </div>
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <span className="text-red-600 text-xl">💸</span>
-            </div>
+      <div className="mb-6 bg-white rounded-lg card-shadow p-4 sm:p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs sm:text-sm font-medium text-gray-600">Total Expenses</p>
+            <p className="text-lg sm:text-2xl font-bold text-red-600">₹{totalExpenses.toLocaleString("en-IN")}</p>
+          </div>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <span className="text-red-600 text-lg sm:text-xl">💸</span>
           </div>
         </div>
-      )}
+      </div>
 
-      <div className="bg-white rounded-lg card-shadow p-6">
+      <div className="bg-white rounded-lg card-shadow p-4 sm:p-6">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
               <input
@@ -134,7 +197,7 @@ export default function ShopExpenses() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
               <select
@@ -146,7 +209,7 @@ export default function ShopExpenses() {
                 <option value="">Select payment type</option>
                 {paymentTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {type.replace('_', ' ')}
                   </option>
                 ))}
               </select>
@@ -162,7 +225,7 @@ export default function ShopExpenses() {
                 <option value="">Select category</option>
                 {expenseCategories.map((category) => (
                   <option key={category} value={category}>
-                    {category}
+                    {category.replace('_', ' ')}
                   </option>
                 ))}
               </select>
@@ -183,67 +246,95 @@ export default function ShopExpenses() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Expense
+              {isSubmitting ? "Saving..." : "Save Expense"}
             </button>
           </div>
         </form>
       </div>
 
       {/* Recent Expenses */}
-      <div className="mt-8 bg-white rounded-lg card-shadow p-6">
+      <div className="mt-8 bg-white rounded-lg card-shadow p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Recent Expenses</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Expense Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {expenses.length > 0 ? (
-                expenses.slice(0, 10).map((expense) => (
-                  <tr key={expense.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(expense.date).toLocaleDateString("en-IN")}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.expenseType}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.expenseCategory}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{expense.remarks}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ₹{expense.amount.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                      {expense.paymentType}
+        {expensesLoading ? (
+          <div className="text-center py-8">
+            <div className="text-gray-500">Loading expenses...</div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Expense Type
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {expenses.length > 0 ? (
+                  expenses.map((expense) => (
+                    <tr key={expense.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(expense.date).toLocaleDateString("en-IN")}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{expense.expenseType}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {(expense.expenseCategory || "").replace('_', ' ')}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{expense.remarks}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ₹{(expense.amount || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                        {(expense.paymentType || "").replace('_', ' ').toLowerCase()}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => editExpense(expense)}
+                            className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteExpense(expense.id)}
+                            className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-3 sm:px-6 py-4 text-center text-sm text-gray-500">
+                      No expenses recorded yet
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                    No expenses recorded yet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

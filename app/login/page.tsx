@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
-  const [selectedRole, setSelectedRole] = useState<"owner" | "worker">("owner")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -21,20 +20,19 @@ export default function LoginPage() {
     setError("")
     setIsLoading(true)
 
-    // Simple authentication logic - in real app, this would be server-side
-    const validCredentials = {
-      owner: { username: "owner", password: "owner123" },
-      worker: { username: "worker", password: "worker123" },
+    try {
+      const success = await login(username, password)
+      console.log("success", success)
+      if (success) {
+        router.push("/billing")
+      } else {
+        setError("Invalid username or password")
+      }
+    } catch (error) {
+      setError("Login failed. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
-
-    if (username === validCredentials[selectedRole].username && password === validCredentials[selectedRole].password) {
-      login(selectedRole, username)
-      router.push(selectedRole === "worker" ? "/billing" : "/")
-    } else {
-      setError("Invalid username or password")
-    }
-
-    setIsLoading(false)
   }
 
   return (
@@ -49,43 +47,6 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          {/* Role Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Login As</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedRole("owner")}
-                className={`p-3 rounded-lg border-2 transition-all ${
-                  selectedRole === "owner"
-                    ? "border-purple-500 bg-purple-50 text-purple-700"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-purple-300"
-                }`}
-              >
-                <div className="text-center">
-                  <div className="text-lg mb-1">👑</div>
-                  <div className="font-medium">Owner</div>
-                  <div className="text-xs">Full Access</div>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole("worker")}
-                className={`p-3 rounded-lg border-2 transition-all ${
-                  selectedRole === "worker"
-                    ? "border-purple-500 bg-purple-50 text-purple-700"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-purple-300"
-                }`}
-              >
-                <div className="text-center">
-                  <div className="text-lg mb-1">👤</div>
-                  <div className="font-medium">Worker</div>
-                  <div className="text-xs">Billing Only</div>
-                </div>
-              </button>
-            </div>
-          </div>
-
           {/* Username */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
@@ -94,7 +55,7 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder={`Enter ${selectedRole} username`}
+              placeholder="Enter username"
               required
             />
           </div>
@@ -127,8 +88,8 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <div className="mb-2">Demo Credentials:</div>
-          <div>Owner: owner / owner123</div>
-          <div>Worker: worker / worker123</div>
+          <div>Admin: admin / admin123</div>
+          <div>Worker: worker / admin123</div>
         </div>
       </div>
     </div>
