@@ -2,13 +2,21 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "trustedDependencies": [
+    "@prisma/client",
+    "prisma",
+    "@prisma/engines",
+    "esbuild",
+    "core-js"
+  ],
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
     "setup": "node scripts/setup.js",
-    "db:generate": "prisma generate",
+    "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
