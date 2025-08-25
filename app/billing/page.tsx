@@ -388,17 +388,17 @@ export default function BillingSystem() {
                   onChange={(e) => updateCurrentItem("purchaseCode", e.target.value.toUpperCase())}
                   placeholder="e.g., DIN"
                 />
-                {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1">
                   <p className="text-xs text-gray-500">
                     {decodedInfo.valid ? (
-                      <>Decoded: ₹{decodedInfo.value}</>
+                      <></>
                     ) : currentItem.purchaseCode ? (
                       <span className="text-red-500">Invalid code</span>
                     ) : (
-                      "Decoded: ₹0"
+                      ""
                     )}
                   </p>
-                  {decodedInfo.valid && (
+                  {/* {decodedInfo.valid && (
                     <button
                       type="button"
                       onClick={() => updateCurrentItem("salePrice", decodedInfo.value)}
@@ -406,8 +406,8 @@ export default function BillingSystem() {
                     >
                       Use as Sale Price
                     </button>
-                  )}
-                </div> */}
+                  )} */}
+                </div>
               </div>
 
               <div className="flex items-center mt-2 sm:mt-0">

@@ -29,10 +29,13 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
       return
     }
 
-    // Restrict worker access to only billing page
-    if (isAuthenticated && user?.role === "WORKER" && pathname !== "/billing") {
-      router.push("/billing")
-      return
+    // Restrict worker access to only billing section
+    if (isAuthenticated && user?.role === "WORKER") {
+      // Allow any route that starts with /billing (e.g., /billing, /billing/all)
+      if (!pathname.startsWith("/billing")) {
+        router.push("/billing")
+        return
+      }
     }
   }, [isAuthenticated, pathname, router, user, isLoading])
 

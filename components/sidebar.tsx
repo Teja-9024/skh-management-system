@@ -8,6 +8,7 @@ import { useState, useEffect } from "react"
 const menuItems = [
   { href: "/", label: "Dashboard", icon: "📊", roles: ["owner"] },
   { href: "/billing", label: "Billing System", icon: "🧾", roles: ["owner", "worker"] },
+  { href: "/billing/all", label: "All Bills", icon: "📜", roles: ["owner", "worker"] },
   { href: "/purchase", label: "Market Purchase", icon: "🛒", roles: ["owner"] },
   { href: "/borrowed", label: "Borrowed Money", icon: "💰", roles: ["owner"] },
   { href: "/expenses", label: "Shop Expenses", icon: "💸", roles: ["owner"] },
