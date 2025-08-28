@@ -54,6 +54,7 @@ export default function BorrowedMoney() {
 
   const { loading: transactionsLoading, execute: fetchTransactions } = useApi()
   const { mutate: createTransaction } = useApiMutation()
+  const { mutate: deleteTransactionMutation } = useApiMutation()
 
   const paymentMethods = ["Cash", "Card", "UPI", "Bank Transfer", "Cheque"]
   const destinations = ["Individual Person", "Business", "Bank", "Financial Institution"]
@@ -101,8 +102,8 @@ export default function BorrowedMoney() {
       const payload = {
         transactionType: formData.transactionType.toUpperCase(), // API expects ENUM-like
         date: formData.date,
-        amount: formData.amount,
-        paymentMethod: formData.paymentMethod.toUpperCase(),
+        amount: Number(formData.amount),
+        paymentMethod: formData.paymentMethod.toUpperCase().replace(' ', '_'),
         destination: formData.destination,
         personName:
           formData.transactionType === "borrowed"
@@ -111,7 +112,7 @@ export default function BorrowedMoney() {
         contactInfo: formData.contactInfo,
         primaryPurpose: formData.primaryPurpose,
         expectedReturnDate: formData.expectedReturnDate || null,
-        interestRate: formData.interestRate,
+        interestRate: Number(formData.interestRate || 0),
         interestType: formData.interestType.toUpperCase().replace(" ", "_"),
         status: formData.status.toUpperCase().replace("/", "_"),
         detailedDescription: formData.detailedDescription,
@@ -173,7 +174,7 @@ export default function BorrowedMoney() {
   const deleteTransaction = async (transactionId: string) => {
     if (!confirm("Are you sure you want to delete this transaction?")) return
     try {
-      // await deleteTransactionMutation(`/api/money-transactions/${transactionId}`)
+      await deleteTransactionMutation(`/api/money-transactions/${transactionId}`, { method: 'DELETE' })
       await loadTransactions()
       alert("Transaction deleted successfully!")
     } catch (error) {

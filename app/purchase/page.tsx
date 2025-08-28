@@ -38,6 +38,9 @@ export default function MarketPurchase() {
 
   const { data: purchasesData, loading: purchasesLoading, execute: fetchPurchases } = useApi()
   const { mutate: createPurchase } = useApiMutation()
+  const { mutate: updatePurchase } = useApiMutation()
+  const { mutate: deletePurchaseMutation } = useApiMutation()
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null)
 
   const stockStatuses = ["AVAILABLE", "OUT_OF_STOCK", "LOW_STOCK", "ORDERED"]
   const paymentTypes = ["CASH", "CARD", "UPI", "BANK_TRANSFER", "CHEQUE"]
@@ -108,7 +111,11 @@ export default function MarketPurchase() {
         remarks: formData.remarks,
       }
 
-      await createPurchase('/api/purchases', { body: purchaseData })
+      if (editingPurchaseId) {
+        await updatePurchase(`/api/purchases/${editingPurchaseId}`, { method: 'PUT', body: purchaseData })
+      } else {
+        await createPurchase('/api/purchases', { body: purchaseData })
+      }
 
       // Reset form
       setFormData({
@@ -123,11 +130,12 @@ export default function MarketPurchase() {
         borrowedAmount: 0,
         remarks: "",
       })
+      setEditingPurchaseId(null)
 
       // Reload purchases
       await loadPurchases()
       
-      alert("Purchase saved successfully!")
+      alert(editingPurchaseId ? "Purchase updated successfully!" : "Purchase saved successfully!")
     } catch (error: any) {
       alert(`Failed to save purchase: ${error.message}`)
     } finally {
@@ -137,8 +145,9 @@ export default function MarketPurchase() {
 
   // Edit purchase function
   const editPurchase = (purchase: any) => {
+    setEditingPurchaseId(purchase.id)
     setFormData({
-      purchaseDate: purchase.purchaseDate,
+      purchaseDate: new Date(purchase.purchaseDate).toISOString().split("T")[0],
       productName: purchase.product?.name || purchase.productName || "",
       supplierName: purchase.supplier?.name || purchase.supplierName || "",
       purchasePrice: purchase.purchasePrice || 0,
@@ -157,8 +166,7 @@ export default function MarketPurchase() {
   const deletePurchase = async (purchaseId: string) => {
     if (confirm('Are you sure you want to delete this purchase?')) {
       try {
-        // You'll need to implement the delete API endpoint
-        // await deletePurchaseMutation(`/api/purchases/${purchaseId}`)
+        await deletePurchaseMutation(`/api/purchases/${purchaseId}`, { method: 'DELETE' })
         // Reload purchases after deletion
         await loadPurchases()
         alert('Purchase deleted successfully!')
@@ -311,7 +319,7 @@ export default function MarketPurchase() {
               disabled={isSubmitting}
               className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Saving..." : "Save Purchase"}
+              {isSubmitting ? (editingPurchaseId ? "Updating..." : "Saving...") : (editingPurchaseId ? "Update Purchase" : "Save Purchase")}
             </button>
           </div>
         </form>

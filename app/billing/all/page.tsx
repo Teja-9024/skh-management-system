@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useApi } from "@/hooks/use-api"
+import { useApi, useApiMutation } from "@/hooks/use-api"
 
 interface BillAllItem {
   id: string
@@ -31,6 +31,7 @@ type DateMode = "specific" | "month" | "year" | "range"
 
 export default function AllBillsPage() {
   const { execute: api } = useApi()
+  const { mutate: deleteBill } = useApiMutation()
 
   const [bills, setBills] = useState<BillAllItem[]>([])
   const [page, setPage] = useState(1)
@@ -401,6 +402,7 @@ export default function AllBillsPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SELLER</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">REMARKS</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">TOTAL</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
@@ -459,6 +461,30 @@ export default function AllBillsPage() {
                       <td className="px-4 py-3 text-sm text-gray-900">{bill.remarks || "N/A"}</td>
                       <td className="px-4 py-3 text-sm text-right tabular-nums font-mono font-semibold text-gray-900">
                         {money(bill.totalAmount ?? itemsTotal)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => window.location.assign('/billing')}
+                            className="px-3 py-1.5 rounded bg-blue-500 text-white text-xs hover:bg-blue-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!confirm('Are you sure you want to delete this bill?')) return
+                              try {
+                                await deleteBill(`/api/bills/${bill.id}`, { method: 'DELETE' })
+                                setBills((prev) => prev.filter((b) => b.id !== bill.id))
+                              } catch (e) {
+                                alert('Failed to delete bill')
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded bg-red-500 text-white text-xs hover:bg-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )

@@ -85,9 +85,12 @@ export default function BillingSystem() {
 
   const [bills, setBills] = useState<(BillData & { id: string; totalAmount: number; customer: any; items: any[] })[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingBillId, setEditingBillId] = useState<string | null>(null)
 
   const { data: billsData, loading: billsLoading, execute: fetchBills } = useApi()
   const { mutate: createBill } = useApiMutation()
+  const { mutate: mutateBill } = useApiMutation()
+  const { mutate: deleteBillMutation } = useApiMutation()
 
   useEffect(() => {
     loadBills()
@@ -175,13 +178,21 @@ export default function BillingSystem() {
 
   // Edit bill function
   const editBill = (bill: any) => {
+    setEditingBillId(bill.id)
+    // Ensure date is in yyyy-mm-dd and items include totals
     setFormData({
       billNumber: bill.billNumber,
-      date: bill.date,
+      date: new Date(bill.date).toISOString().split("T")[0],
       sellerName: bill.sellerName || "",
       customerName: bill.customer?.name || bill.customerName || "",
       customerMobile: bill.customer?.mobile || bill.customerMobile || "",
-      items: bill.items || [],
+      items: (bill.items || []).map((it: any) => ({
+        productName: it.product?.name || it.productName || "",
+        quantity: Number(it.quantity || 0),
+        salePrice: Number(it.salePrice || 0),
+        purchaseCode: it.purchaseCode || "",
+        total: Number(it.quantity || 0) * Number(it.salePrice || 0),
+      })),
       savingBalance: bill.savingBalance || 0,
       cashPayment: bill.cashPayment || 0,
       onlinePayment: bill.onlinePayment || 0,
@@ -196,8 +207,7 @@ export default function BillingSystem() {
   const deleteBill = async (billId: string) => {
     if (confirm('Are you sure you want to delete this bill?')) {
       try {
-        // You'll need to implement the delete API endpoint
-        // await deleteBillMutation(`/api/bills/${billId}`)
+        await deleteBillMutation(`/api/bills/${billId}`, { method: 'DELETE' })
         // Reload bills after deletion
         await loadBills()
         alert('Bill deleted successfully!')
@@ -244,11 +254,15 @@ export default function BillingSystem() {
         remarks: formData.remarks,
       }
 
-      await createBill('/api/bills', { body: billData })
+      if (editingBillId) {
+        await mutateBill(`/api/bills/${editingBillId}`, { method: 'PUT', body: billData })
+      } else {
+        await createBill('/api/bills', { body: billData })
+      }
 
       // Reset form
       setFormData({
-        billNumber: (Number.parseInt(formData.billNumber) + 1).toString(),
+        billNumber: editingBillId ? formData.billNumber : (Number.parseInt(formData.billNumber) + 1).toString(),
         date: new Date().toISOString().split("T")[0],
         sellerName: "",
         customerName: "",
@@ -260,11 +274,12 @@ export default function BillingSystem() {
         borrowedAmount: 0,
         remarks: "",
       })
+      setEditingBillId(null)
 
       // Reload bills
       await loadBills()
       
-      alert("Bill saved successfully!")
+      alert(editingBillId ? "Bill updated successfully!" : "Bill saved successfully!")
     } catch (error: any) {
       alert(`Failed to save bill: ${error.message}`)
     } finally {
@@ -566,7 +581,7 @@ export default function BillingSystem() {
                 disabled={isSubmitting}
                 className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Saving..." : "Save Bill"}
+                {isSubmitting ? (editingBillId ? "Updating..." : "Saving...") : (editingBillId ? "Update Bill" : "Save Bill")}
               </button>
             </div>
           </div>
