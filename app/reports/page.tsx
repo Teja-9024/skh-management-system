@@ -109,31 +109,72 @@ export default function ReportsAnalysis() {
         allData.expenses = expensesData.expenses || []
       }
 
-      // Calculate summary
-      const totalSales = allData.bills.reduce((sum, bill) => sum + (bill.totalAmount || 0), 0)
-      const totalPurchases = allData.purchases.reduce((sum, purchase) => sum + (purchase.totalValue || 0), 0)
-      const totalExpenses = allData.expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
+      // // Calculate summary
+      // const totalSales = allData.bills.reduce((sum, bill) => sum + (bill.totalAmount || 0), 0)
+      // const totalPurchases = allData.purchases.reduce((sum, purchase) => sum + (purchase.totalValue || 0), 0)
+      // const totalExpenses = allData.expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
       
-      const borrowedTransactions = allData.borrowed.filter(t => t.transactionType === 'BORROWED')
-      const lentTransactions = allData.borrowed.filter(t => t.transactionType === 'LENT')
+      // const borrowedTransactions = allData.borrowed.filter(t => t.transactionType === 'BORROWED')
+      // const lentTransactions = allData.borrowed.filter(t => t.transactionType === 'LENT')
       
-      const totalBorrowed = borrowedTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
-      const totalLent = lentTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
+      // const totalBorrowed = borrowedTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
+      // const totalLent = lentTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
       
-      const grossProfit = totalSales - totalPurchases
-      const netProfit = grossProfit - totalExpenses
-      const netOutstanding = totalBorrowed - totalLent
+      // const grossProfit = totalSales - totalPurchases
+      // const netProfit = grossProfit - totalExpenses
+      // const netOutstanding = totalBorrowed - totalLent
 
-      allData.summary = {
-        totalSales,
-        totalPurchases,
-        totalExpenses,
-        totalBorrowed,
-        totalLent,
-        netOutstanding,
-        grossProfit,
-        netProfit,
-      }
+      // allData.summary = {
+      //   totalSales,
+      //   totalPurchases,
+      //   totalExpenses,
+      //   totalBorrowed,
+      //   totalLent,
+      //   netOutstanding,
+      //   grossProfit,
+      //   netProfit,
+      // }
+
+      // Calculate summary (corrected COGS-based profit)
+        const totalSales = allData.bills.reduce((sum, bill: any) => sum + (bill.totalAmount || 0), 0)
+        const totalPurchases = allData.purchases.reduce((sum, p: any) => sum + (p.totalValue || 0), 0)
+        const totalExpenses = allData.expenses.reduce((sum, e: any) => sum + (e.amount || 0), 0)
+
+        // Borrowed/Lent (unchanged)
+        const borrowedTransactions = allData.borrowed.filter((t: any) => t.transactionType === "BORROWED")
+        const lentTransactions     = allData.borrowed.filter((t: any) => t.transactionType === "LENT")
+        const totalBorrowed = borrowedTransactions.reduce((s: number, t: any) => s + (t.amount || 0), 0)
+        const totalLent     = lentTransactions.reduce((s: number, t: any) => s + (t.amount || 0), 0)
+        const netOutstanding = totalBorrowed - totalLent
+
+        // ---- NEW: COGS from bills using purchaseCode ----
+        const cogsFromBills = allData.bills.reduce((billSum: number, bill: any) => {
+          const items = bill.items || []
+          const cogsForBill = items.reduce((itemSum: number, it: any) => {
+            const quantity = Number(it.quantity || 0)
+            // decodePurchaseCode is already defined below in this file
+            const decoded = decodePurchaseCode(String(it.purchaseCode || ""))
+            const unitCost = decoded.valid ? Number(decoded.value) : 0
+            return itemSum + unitCost * quantity
+          }, 0)
+          return billSum + cogsForBill
+        }, 0)
+
+        // Profit using COGS
+        const grossProfit = totalSales - cogsFromBills
+        const netProfit   = grossProfit - totalExpenses
+
+        allData.summary = {
+          totalSales,
+          totalPurchases,    // keep for reference/summary cards
+          totalExpenses,
+          totalBorrowed,
+          totalLent,
+          netOutstanding,
+          grossProfit,
+          netProfit,
+        }
+
 
       setReportData(allData)
       setReportGenerated(true)
