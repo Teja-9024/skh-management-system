@@ -371,7 +371,6 @@ function exportBillingReportToExcel(data: any[], dateRange: string) {
     { v: "", s: { alignment: { horizontal: "center" } } }, // SER NO
     { v: "", s: { alignment: { horizontal: "center" } } }, // Bill No
     { v: "", s: { alignment: { horizontal: "center" } } }, // Date
-    { v: "", s: { alignment: { horizontal: "center" } } },
     { v: "TOTAL PROFIT", s: { font: { sz: 12, bold: true }, alignment: { horizontal: "right" } } },
     { v: `₹${grandTotalProfit.toFixed(2)}`, s: { font: { sz: 12, bold: true, color: { rgb: "008000" } }, alignment: { horizontal: "center" } } }
   ]);
