@@ -254,6 +254,7 @@ export default function ReportsAnalysis() {
   const getFilteredData = () => {
     switch (filters.reportType) {
       case "Billing":
+        console.log("REPORT filtered bills:", reportData.bills.length)
         return reportData.bills
       case "Purchase":
         return reportData.purchases
@@ -1229,7 +1230,7 @@ export default function ReportsAnalysis() {
                   }}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
                 >
-                  📊 Download Excel
+                  📊 Download Excels
                 </button>
               </div>
             </div>

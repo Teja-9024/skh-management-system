@@ -1,5 +1,6 @@
 
 import * as XLSX from "xlsx-js-style";
+import { decodePurchaseCode } from "./function";
 
 export function exportToExcel({
   title,
@@ -22,7 +23,9 @@ export function exportToExcel({
   };
 }) {
   // Special handling for billing reports
+  console.log("data", data);
   if (title === "Billing Report") {
+    console.log("biilling report data", data);
     exportBillingReportToExcel(data, dateRange);
     return;
   }
@@ -193,48 +196,39 @@ export function exportToExcel({
 // Special function for billing reports to match the image format
 function exportBillingReportToExcel(data: any[], dateRange: string) {
   const rows: any[] = [];
-  
+
   // Company header
   rows.push([{
     v: "SHRI KARISHNA HANDLOOM",
-    s: {
-      font: { sz: 16, bold: true, color: { rgb: "083da6" } },
-      alignment: { horizontal: "center" }
-    }
+    s: { font: { sz: 16, bold: true, color: { rgb: "083da6" } }, alignment: { horizontal: "center" } }
   }]);
-  
+
   // Title
   rows.push([{
     v: "Billing Report",
-    s: {
-      font: { sz: 14, bold: true },
-      alignment: { horizontal: "center" }
-    }
+    s: { font: { sz: 14, bold: true }, alignment: { horizontal: "center" } }
   }]);
-  
+
   // Date range
   rows.push([{
     v: dateRange,
-    s: {
-      font: { sz: 12 },
-      alignment: { horizontal: "center" }
-    }
+    s: { font: { sz: 12 }, alignment: { horizontal: "center" } }
   }]);
-  
+
   // Empty row
   rows.push([]);
-  
+
   // Table headers
   const headers = [
-    "SER NO", "Bill No", "Date", "NAME OF CUSTOMER", "MOB NO OF CUSTOMER", 
+    "SER NO", "Bill No", "Date", "NAME OF CUSTOMER", "MOB NO OF CUSTOMER",
     "ITEMS", "CASE PAYMENT", "ONLINE PAYMENT", "BORROW", "Name of Seller", "REMARKS"
   ];
-  
+
   const headerRow = headers.map(header => ({
     v: header,
     s: {
       font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "FFD700" } }, // Yellow background
+      fill: { fgColor: { rgb: "FFD700" } }, // Yellow
       alignment: { horizontal: "center" },
       border: {
         top: { style: "thin", color: { rgb: "000000" } },
@@ -245,104 +239,139 @@ function exportBillingReportToExcel(data: any[], dateRange: string) {
     }
   }));
   rows.push(headerRow);
-  
+
   // Data rows
   data.forEach((bill, index) => {
     const billRow = [
-      { v: index + 1, s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: bill.billNumber, s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: new Date(bill.date).toLocaleDateString("en-IN"), s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: bill.customerName, s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: bill.customerMobile || "N/A", s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: "", s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } }, // Items will be filled below
-      { v: bill.cashPayment || 0, s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: bill.onlinePayment || 0, s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: bill.borrowedAmount || 0, s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: bill.sellerName || "N/A", s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } },
-      { v: bill.remarks || "N/A", s: { font: { sz: 11 }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } } }
+      cell(index + 1),
+      cell(bill.billNumber),
+      cell(new Date(bill.date).toLocaleDateString("en-IN")),
+      cell(bill.customer?.name ?? bill.customerName ?? "N/A"),
+      cell(bill.customer?.mobile ?? "N/A"),
+      cell(""), // items
+      cell(bill.cashPayment || 0),
+      cell(bill.onlinePayment || 0),
+      cell(bill.borrowedAmount || 0),
+      cell(bill.sellerName || "N/A"),
+      cell(bill.remarks || "N/A")
     ];
-    
+
     rows.push(billRow);
-    
-    // Add items for this bill
+
+    // ---- Items for this bill (Profit instead of Saving; uses decoded purchase + qty) ----
     if (bill.items && bill.items.length > 0) {
       bill.items.forEach((item: any) => {
-        const itemRow = [
+        const purchaseCode = item.purchaseCode || "";
+        const decoded = decodePurchaseCode(purchaseCode);
+        const unitCost = decoded.valid ? Number(decoded.value) : Number(item.purchasePrice ?? 0);
+        const salePrice = Number(item.salePrice || 0);
+        const qty = Number(item.quantity || 1);
+        const itemProfit = (salePrice - unitCost) * qty;
+
+        const itemText = `${item.product?.name || item.productName} (Qty: ${qty}) - ` +
+                         `Purchase: ₹${unitCost.toFixed(2)} - Sale: ₹${salePrice.toFixed(2)} - ` +
+                         `Profit: ₹${itemProfit.toFixed(2)}`;
+
+        rows.push([
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } },
-          { 
-            v: `${item.productName} (Qty: ${item.quantity}) - Purchase: ${item.purchaseCode} - Sale: ₹${item.salePrice} - Saving: ₹${(item.salePrice - (item.purchasePrice || 0)).toFixed(2)}`, 
-            s: { font: { sz: 11 }, border: { left: { style: "thin" }, right: { style: "thin" } } }
-          },
+          { v: itemText, s: { font: { sz: 11 }, border: { left: { style: "thin" }, right: { style: "thin" } } } },
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } },
           { v: "", s: { font: { sz: 11 } } }
-        ];
-        rows.push(itemRow);
+        ]);
       });
-      
-      // Add total row for this bill
-      const totalPurchase = bill.items.reduce((sum: number, item: any) => sum + (item.purchasePrice || 0), 0);
-      const totalSale = bill.items.reduce((sum: number, item: any) => sum + item.salePrice, 0);
-      const totalSaving = bill.items.reduce((sum: number, item: any) => sum + (item.salePrice - (item.purchasePrice || 0)), 0);
-      
-      const totalRow = [
+
+      // ---- Totals row (Purchase*qty, Sale*qty, Profit) ----
+      const totals = bill.items.reduce((acc: any, item: any) => {
+        const decoded = decodePurchaseCode(item.purchaseCode || "");
+        const unitCost = decoded.valid ? Number(decoded.value) : Number(item.purchasePrice ?? 0);
+        const salePrice = Number(item.salePrice || 0);
+        const qty = Number(item.quantity || 1);
+
+        acc.purchase += unitCost * qty;
+        acc.sale += salePrice * qty;
+        acc.profit += (salePrice - unitCost) * qty;
+        return acc;
+      }, { purchase: 0, sale: 0, profit: 0 });
+
+      rows.push([
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } },
-        { 
-          v: `Total - Purchase: ₹${totalPurchase.toFixed(2)} - Sale: ₹${totalSale.toFixed(2)} - Saving: ₹${totalSaving.toFixed(2)}`, 
-          s: { font: { sz: 11, bold: true }, border: { left: { style: "thin" }, right: { style: "thin" }, bottom: { style: "thin" } } }
+        {
+          v: `Total - Purchase: ₹${totals.purchase.toFixed(2)} - Sale: ₹${totals.sale.toFixed(2)} - Profit: ₹${totals.profit.toFixed(2)}`,
+          s: {
+            font: { sz: 11, bold: true, color: { rgb: totals.profit >= 0 ? "008000" : "CC0000" } },
+            border: { left: { style: "thin" }, right: { style: "thin" }, bottom: { style: "thin" } }
+          }
         },
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } },
         { v: "", s: { font: { sz: 11 } } }
-      ];
-      rows.push(totalRow);
-      
+      ]);
+
       // Empty row between bills
       rows.push([]);
     }
   });
-  
+
   // Create worksheet
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
-  
+
   // Merge cells for headers
-  const mergeRanges = [
+  worksheet["!merges"] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }, // Company name
     { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } }, // Title
     { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }  // Date range
   ];
-  worksheet["!merges"] = mergeRanges;
-  
+
   // Set column widths
-  const colWidths = [
+  worksheet["!cols"] = [
     { wch: 8 },   // SER NO
     { wch: 10 },  // Bill No
     { wch: 12 },  // Date
     { wch: 20 },  // Customer Name
-    { wch: 15 },  // Mobile
-    { wch: 60 },  // Items (wider for nested content)
-    { wch: 12 },  // Cash Payment
-    { wch: 12 },  // Online Payment
+    { wch: 22 },  // Mobile
+    { wch: 60 },  // ITEMS (wider, now contains Profit)
+    { wch: 15 },  // Cash Payment
+    { wch: 15 },  // Online Payment
     { wch: 10 },  // Borrow
     { wch: 15 },  // Seller Name
     { wch: 20 }   // Remarks
   ];
-  worksheet["!cols"] = colWidths;
-  
+
   // Create workbook and save
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Billing Report");
   XLSX.writeFile(workbook, "Billing Report.xlsx");
-} 
+
+  
+}
+
+function allThin() {
+    return {
+      top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" }
+    }
+  }
+
+function cell(value: any, bold = false) {
+  return {
+    v: value,
+    s: {
+      font: { sz: 11, bold },
+      border: allThin(),
+      alignment: { horizontal: "center", vertical: "center" } 
+    }
+  }
+}
+
