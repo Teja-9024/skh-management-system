@@ -218,6 +218,57 @@ function exportBillingReportToExcel(data: any[], dateRange: string) {
   // Empty row
   rows.push([]);
 
+  // 👉 calculate totals (correct: qty + decoded cost + fallback)
+  let grandTotalSales = 0;
+  let grandTotalProfit = 0;
+
+  for (const bill of data as any[]) {
+    const items = Array.isArray(bill.items) ? bill.items : [];
+
+    // Prefer bill.totalAmount if available; otherwise compute from items (salePrice * qty)
+    const saleFromItems = items.reduce((s: number, it: any) => {
+      const qty = Number(it.quantity ?? 1);
+      const sale = Number(it.salePrice ?? 0);
+      return s + sale * qty;
+    }, 0);
+
+    const totalSale = !Number.isNaN(Number(bill.totalAmount)) && bill.totalAmount != null
+      ? Number(bill.totalAmount)
+      : saleFromItems;
+
+    grandTotalSales += totalSale;
+
+    // Profit = (sale - unitCost) * qty, with decoded purchase price
+    const billProfit = items.reduce((s: number, it: any) => {
+      const qty = Number(it.quantity ?? 1);
+      const sale = Number(it.salePrice ?? 0);
+      const decoded = decodePurchaseCode(String(it.purchaseCode ?? ""));
+      const unitCost = decoded?.valid ? Number(decoded.value) : Number(it.purchasePrice ?? 0);
+      return s + (sale - unitCost) * qty;
+    }, 0);
+
+    grandTotalProfit += billProfit;
+  }
+
+  // 👉 add summary rows (same placement/formatting)
+  rows.push([]);
+  rows.push([
+    { v: "", s: { alignment: { horizontal: "center" } } }, // SER NO
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Bill No
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Date
+    { v: "TOTAL SALES", s: { font: { sz: 12, bold: true }, alignment: { horizontal: "right" } } },
+    { v: `₹${grandTotalSales.toFixed(2)}`, s: { font: { sz: 12, bold: true, color: { rgb: "0000FF" } }, alignment: { horizontal: "center" } } }
+  ]);
+
+  rows.push([
+    { v: "", s: { alignment: { horizontal: "center" } } }, // SER NO
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Bill No
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Date
+    { v: "TOTAL PROFIT", s: { font: { sz: 12, bold: true }, alignment: { horizontal: "right" } } },
+    { v: `₹${grandTotalProfit.toFixed(2)}`, s: { font: { sz: 12, bold: true, color: { rgb: "008000" } }, alignment: { horizontal: "center" } } }
+  ]);
+
+
   // Table headers
   const headers = [
     "SER NO", "Bill No", "Date", "NAME OF CUSTOMER", "MOB NO OF CUSTOMER",
@@ -324,56 +375,6 @@ function exportBillingReportToExcel(data: any[], dateRange: string) {
       rows.push([]);
     }
   });
-
-  // 👉 calculate totals (correct: qty + decoded cost + fallback)
-  let grandTotalSales = 0;
-  let grandTotalProfit = 0;
-
-  for (const bill of data as any[]) {
-    const items = Array.isArray(bill.items) ? bill.items : [];
-
-    // Prefer bill.totalAmount if available; otherwise compute from items (salePrice * qty)
-    const saleFromItems = items.reduce((s: number, it: any) => {
-      const qty = Number(it.quantity ?? 1);
-      const sale = Number(it.salePrice ?? 0);
-      return s + sale * qty;
-    }, 0);
-
-    const totalSale = !Number.isNaN(Number(bill.totalAmount)) && bill.totalAmount != null
-      ? Number(bill.totalAmount)
-      : saleFromItems;
-
-    grandTotalSales += totalSale;
-
-    // Profit = (sale - unitCost) * qty, with decoded purchase price
-    const billProfit = items.reduce((s: number, it: any) => {
-      const qty = Number(it.quantity ?? 1);
-      const sale = Number(it.salePrice ?? 0);
-      const decoded = decodePurchaseCode(String(it.purchaseCode ?? ""));
-      const unitCost = decoded?.valid ? Number(decoded.value) : Number(it.purchasePrice ?? 0);
-      return s + (sale - unitCost) * qty;
-    }, 0);
-
-    grandTotalProfit += billProfit;
-  }
-
-  // 👉 add summary rows (same placement/formatting)
-  rows.push([]);
-  rows.push([
-    { v: "", s: { alignment: { horizontal: "center" } } }, // SER NO
-    { v: "", s: { alignment: { horizontal: "center" } } }, // Bill No
-    { v: "", s: { alignment: { horizontal: "center" } } }, // Date
-    { v: "TOTAL SALES", s: { font: { sz: 12, bold: true }, alignment: { horizontal: "right" } } },
-    { v: `₹${grandTotalSales.toFixed(2)}`, s: { font: { sz: 12, bold: true, color: { rgb: "0000FF" } }, alignment: { horizontal: "center" } } }
-  ]);
-
-  rows.push([
-    { v: "", s: { alignment: { horizontal: "center" } } }, // SER NO
-    { v: "", s: { alignment: { horizontal: "center" } } }, // Bill No
-    { v: "", s: { alignment: { horizontal: "center" } } }, // Date
-    { v: "TOTAL PROFIT", s: { font: { sz: 12, bold: true }, alignment: { horizontal: "right" } } },
-    { v: `₹${grandTotalProfit.toFixed(2)}`, s: { font: { sz: 12, bold: true, color: { rgb: "008000" } }, alignment: { horizontal: "center" } } }
-  ]);
 
 
   // Create worksheet
