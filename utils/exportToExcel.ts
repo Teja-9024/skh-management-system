@@ -34,20 +34,20 @@ export function exportToExcel({
   const rows: any[] = [];
   const colCount = columns.length;
   const thinBorder = {
-  top: { style: "thin", color: { rgb: "000000" } },
-  bottom: { style: "thin", color: { rgb: "000000" } },
-  left: { style: "thin", color: { rgb: "000000" } },
-  right: { style: "thin", color: { rgb: "000000" } }
-};
+    top: { style: "thin", color: { rgb: "000000" } },
+    bottom: { style: "thin", color: { rgb: "000000" } },
+    left: { style: "thin", color: { rgb: "000000" } },
+    right: { style: "thin", color: { rgb: "000000" } }
+  };
 
   rows.push([
-  {
-    v: "Shree Krishna Handloom", // Updated company name
-    s: {
-      font: { sz: 16, bold: true, color: { rgb: "083da6" } }, // 25px and Blue
-      alignment: { horizontal: "center" }
+    {
+      v: "Shree Krishna Handloom", // Updated company name
+      s: {
+        font: { sz: 16, bold: true, color: { rgb: "083da6" } }, // 25px and Blue
+        alignment: { horizontal: "center" }
+      }
     }
-  }
   ]);
   rows.push([
     {
@@ -59,11 +59,11 @@ export function exportToExcel({
     }
   ]);
   rows.push([{
-      v: dateRange,
-      s: {
-        font: { sz: 12, bold: true },
-        alignment: { horizontal: "center", vertical: "center" }
-      }
+    v: dateRange,
+    s: {
+      font: { sz: 12, bold: true },
+      alignment: { horizontal: "center", vertical: "center" }
+    }
   }]);
   // Add header
   // rows.push(columnLabels.length ? columnLabels : columns);
@@ -73,7 +73,7 @@ export function exportToExcel({
       font: { bold: true, color: { rgb: "FFFFFF" } },
       fill: { fgColor: { rgb: "083da6" } },
       alignment: { horizontal: "center" },
-      border:thinBorder
+      border: thinBorder
     }
   }));
   rows.push(header);
@@ -269,8 +269,8 @@ function exportBillingReportToExcel(data: any[], dateRange: string) {
         const itemProfit = (salePrice - unitCost) * qty;
 
         const itemText = `${item.product?.name || item.productName} (Qty: ${qty}) - ` +
-                         `Purchase: ₹${unitCost.toFixed(2)} - Sale: ₹${salePrice.toFixed(2)} - ` +
-                         `Profit: ₹${itemProfit.toFixed(2)}`;
+          `Purchase: ₹${unitCost.toFixed(2)} - Sale: ₹${salePrice.toFixed(2)} - ` +
+          `Profit: ₹${itemProfit.toFixed(2)}`;
 
         rows.push([
           { v: "", s: { font: { sz: 11 } } },
@@ -325,6 +325,58 @@ function exportBillingReportToExcel(data: any[], dateRange: string) {
     }
   });
 
+  // 👉 calculate totals (correct: qty + decoded cost + fallback)
+  let grandTotalSales = 0;
+  let grandTotalProfit = 0;
+
+  for (const bill of data as any[]) {
+    const items = Array.isArray(bill.items) ? bill.items : [];
+
+    // Prefer bill.totalAmount if available; otherwise compute from items (salePrice * qty)
+    const saleFromItems = items.reduce((s: number, it: any) => {
+      const qty = Number(it.quantity ?? 1);
+      const sale = Number(it.salePrice ?? 0);
+      return s + sale * qty;
+    }, 0);
+
+    const totalSale = !Number.isNaN(Number(bill.totalAmount)) && bill.totalAmount != null
+      ? Number(bill.totalAmount)
+      : saleFromItems;
+
+    grandTotalSales += totalSale;
+
+    // Profit = (sale - unitCost) * qty, with decoded purchase price
+    const billProfit = items.reduce((s: number, it: any) => {
+      const qty = Number(it.quantity ?? 1);
+      const sale = Number(it.salePrice ?? 0);
+      const decoded = decodePurchaseCode(String(it.purchaseCode ?? ""));
+      const unitCost = decoded?.valid ? Number(decoded.value) : Number(it.purchasePrice ?? 0);
+      return s + (sale - unitCost) * qty;
+    }, 0);
+
+    grandTotalProfit += billProfit;
+  }
+
+  // 👉 add summary rows (same placement/formatting)
+  rows.push([]);
+  rows.push([
+    { v: "", s: { alignment: { horizontal: "center" } } }, // SER NO
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Bill No
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Date
+    { v: "TOTAL SALES", s: { font: { sz: 12, bold: true }, alignment: { horizontal: "right" } } },
+    { v: `₹${grandTotalSales.toFixed(2)}`, s: { font: { sz: 12, bold: true, color: { rgb: "0000FF" } }, alignment: { horizontal: "center" } } }
+  ]);
+
+  rows.push([
+    { v: "", s: { alignment: { horizontal: "center" } } }, // SER NO
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Bill No
+    { v: "", s: { alignment: { horizontal: "center" } } }, // Date
+    { v: "", s: { alignment: { horizontal: "center" } } },
+    { v: "TOTAL PROFIT", s: { font: { sz: 12, bold: true }, alignment: { horizontal: "right" } } },
+    { v: `₹${grandTotalProfit.toFixed(2)}`, s: { font: { sz: 12, bold: true, color: { rgb: "008000" } }, alignment: { horizontal: "center" } } }
+  ]);
+
+
   // Create worksheet
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
 
@@ -355,14 +407,14 @@ function exportBillingReportToExcel(data: any[], dateRange: string) {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Billing Report");
   XLSX.writeFile(workbook, "Billing Report.xlsx");
 
-  
+
 }
 
 function allThin() {
-    return {
-      top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" }
-    }
+  return {
+    top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" }
   }
+}
 
 function cell(value: any, bold = false) {
   return {
@@ -370,7 +422,7 @@ function cell(value: any, bold = false) {
     s: {
       font: { sz: 11, bold },
       border: allThin(),
-      alignment: { horizontal: "center", vertical: "center" } 
+      alignment: { horizontal: "center", vertical: "center" }
     }
   }
 }
