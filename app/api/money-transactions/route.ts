@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
+    console.log('Received POST body:', body)
+
     const transaction = await handleDatabaseOperation(async () => {
       return await prisma.moneyTransaction.create({
         data: {
@@ -73,39 +75,14 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    return NextResponse.json({ transaction })
-  } catch (error) {
+    return NextResponse.json({ transaction:transaction ,message: 'Transaction created successfully!' ,success:true})
+  } catch (error:any) {
     console.error('Failed to create money transaction:', error)
     return NextResponse.json(
-      { error: 'Failed to create money transaction' },
+      { error: error.message },
       { status: 500 }
     )
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const user = await getCurrentUser(request)
-    if (!user || user.role !== 'OWNER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-    if (!id) {
-      return NextResponse.json({ error: 'Missing id' }, { status: 400 })
-    }
-
-    await handleDatabaseOperation(async () => {
-      await prisma.moneyTransaction.delete({ where: { id } })
-    })
-
-    return NextResponse.json({ message: 'Transaction deleted' })
-  } catch (error) {
-    console.error('Failed to delete transaction:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete transaction' },
-      { status: 500 }
-    )
-  }
-}

@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       amount,
       paymentType,
       expenseCategory,
+      employeeName,
       remarks,
     } = await request.json()
 
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
           date: new Date(date),
           expenseType: expenseType.trim(),
           amount,
+          employeeName: employeeName?.trim() || null,
           paymentType: paymentType as PaymentType,
           expenseCategory: expenseCategory as ExpenseCategory,
           remarks: remarks?.trim() || null,

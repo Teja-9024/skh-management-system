@@ -127,6 +127,7 @@ model Expense {
   amount          Float
   paymentType     PaymentType
   expenseCategory ExpenseCategory
+  employeeName    String?
   remarks         String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -192,6 +193,7 @@ enum ExpenseCategory {
   MAINTENANCE
   INSURANCE
   OTHER
+  EMPLOYEE_SALARY
 }
 
 enum TransactionType {

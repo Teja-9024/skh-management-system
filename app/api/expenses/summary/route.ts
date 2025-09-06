@@ -3,6 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { handleDatabaseOperation } from '@/lib/db-utils'
 import { getCurrentUser } from '@/lib/auth'
 
+interface MonthlyExpenseResult {
+  month: Date;
+  total: string;
+  count: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser(request)
@@ -53,7 +59,7 @@ export async function GET(request: NextRequest) {
       })
 
       // Get monthly expenses (last 12 months)
-      const monthlyExpenses = await prisma.$queryRaw`
+      const monthlyExpenses = await prisma.$queryRaw<MonthlyExpenseResult[]>`
         SELECT 
           DATE_TRUNC('month', date) as month,
           SUM(amount) as total,
@@ -65,19 +71,23 @@ export async function GET(request: NextRequest) {
       `
 
       return {
-        total: totalExpenses._sum.amount || 0,
+        total: Number(totalExpenses._sum.amount) || 0,
         count: totalExpenses._count,
         byCategory: expensesByCategory.map(item => ({
           category: item.expenseCategory,
-          total: item._sum.amount || 0,
+          total: Number(item._sum.amount) || 0,
           count: item._count,
         })),
         byPaymentType: expensesByPaymentType.map(item => ({
           paymentType: item.paymentType,
-          total: item._sum.amount || 0,
+          total: Number(item._sum.amount) || 0,
           count: item._count,
         })),
-        monthly: monthlyExpenses,
+        monthly: monthlyExpenses.map(item => ({
+          month: item.month,
+          total: Number(item.total) || 0,
+          count: Number(item.count),
+        })),
       }
     })
 

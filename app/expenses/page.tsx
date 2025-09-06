@@ -48,6 +48,7 @@ export default function ShopExpenses() {
     "MARKETING",
     "MAINTENANCE",
     "INSURANCE",
+    'EMPLOYEE_SALARY',
     "OTHER",
   ]
 
@@ -255,7 +256,7 @@ export default function ShopExpenses() {
                 onChange={(e) => setFormData((prev) => ({ ...prev, expenseCategory: e.target.value }))}
               >
                 <option value="">Select category</option>
-                {[...expenseCategories, 'EMPLOYEE_SALARY'].map((category) => (
+                {expenseCategories.map((category) => (
                   <option key={category} value={category}>
                     {category.replace('_', ' ')}
                   </option>
