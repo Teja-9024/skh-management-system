@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable, { ColumnInput, RowInput } from "jspdf-autotable";
 
+/* ------------------------------- PUBLIC API ------------------------------- */
 export function exportToPDF({
   title,
   dateRange,
@@ -31,40 +32,57 @@ export function exportToPDF({
   });
 }
 
-/** ------------ 1) BILLING REPORT: same-as-Excel ------------- */
-function exportBillingReportPDF(data: any[], dateRange: string) {
-  // 1) choose page size dynamically (A4 by default; switch to A3 if too tight)
-  let doc = new jsPDF({ orientation: "landscape", format: "a4" });
-  let pageWidth = doc.internal.pageSize.getWidth();
+/* --------------------------------- THEME --------------------------------- */
+// Brand & UI colors (accessible contrast, professional palette)
+const C = {
+  brand: { dk: [15, 76, 129], base: [26, 95, 180], lt: [232, 241, 250] },
+  ink:   { 900: [22, 27, 34], 700: [68, 84, 106], 500: [110, 119, 129] },
+  grid:  { line: [200, 208, 218], light: [244, 247, 251] },
+  ok:    { base: [9, 132, 87] },
+  warn:  { base: [255, 159, 10] },
+  err:   { base: [203, 50, 52] },
+  info:  { base: [93, 63, 211] },
+  gold:  { base: [255, 203, 0] },   // table head like Excel but richer
+};
 
+// quick helpers
+const setFill = (doc: jsPDF, rgb: number[]) => doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+const setStroke = (doc: jsPDF, rgb: number[]) => doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
+const setText = (doc: jsPDF, rgb: number[]) => doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+
+/* -------------------------- 1) BILLING REPORT PDF ------------------------- */
+function exportBillingReportPDF(data: any[], dateRange: string) {
+  // choose page size dynamically (A4 by default; switch to A3 if too tight)
+  let doc = new jsPDF({ orientation: "landscape", format: "a4" });
   const marginSide = 12;
-  let   marginTop  = 48; // ↑ header me totals add kiye, isliye thoda neeche se start
+  let marginTop = 56; // we draw a rich header with chips, so start lower
   const marginBottom = 16;
 
-  // ---- headers array (Excel jaisa)
+  // headers
   const headers = [
     "SER NO","Bill No","Date","NAME OF CUSTOMER","MOB NO OF CUSTOMER",
     "ITEMS","CASE PAYMENT","ONLINE PAYMENT","BORROW","Name of Seller","REMARKS"
   ];
 
-  // ---- base widths (approx like Excel). We'll scale these to fit.
+  // base widths we’ll auto-scale
   const baseWidths: Record<string, number> = {
-    ser: 10, billNo: 16, date: 22, customer: 35, mobile: 26,
-    items: 110, cash: 22, online: 24, borrow: 20, seller: 28, remarks: 26
+    ser: 10, billNo: 16, date: 22, customer: 38, mobile: 28,
+    items: 120, cash: 22, online: 24, borrow: 22, seller: 28, remarks: 26
   };
   const minWidths: Record<string, number> = {
-    ser: 10, billNo: 14, date: 18, customer: 26, mobile: 20,
-    items: 70, cash: 16, online: 16, borrow: 16, seller: 22, remarks: 20
+    ser: 10, billNo: 14, date: 18, customer: 28, mobile: 20,
+    items: 74,  cash: 16, online: 16, borrow: 16, seller: 22, remarks: 18
   };
 
   const totalBase = Object.values(baseWidths).reduce((s, n) => s + n, 0);
   const avail = () => doc.internal.pageSize.getWidth() - marginSide * 2;
 
-  // If A4 too tight (<85% of needed width), switch to A3 before drawing
   if (avail() / totalBase < 0.85) {
     doc = new jsPDF({ orientation: "landscape", format: "a3" });
   }
-  pageWidth = doc.internal.pageSize.getWidth();
+
+  const pageW = () => doc.internal.pageSize.getWidth();
+  const pageH = () => doc.internal.pageSize.getHeight();
 
   const computeWidths = () => {
     const available = avail();
@@ -75,48 +93,57 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
       const w = Math.max(minWidths[k], Math.floor(baseWidths[k] * scale));
       widths[k] = w; sum += w;
     }
-    // distribute leftover (give to items column for more text)
     const leftover = available - sum;
     if (leftover > 0) widths.items += leftover;
     return widths;
   };
-
   const colWidths = computeWidths();
 
-  // ---- GRAND TOTALS (header ke niche dikhayenge)
+  // GRAND TOTALS (header chips)
   const { grandTotalSales, grandTotalProfit } = computeGrandTotals(data);
 
-  // ----------------- HEADER DRAW (repeats each page) -----------------
+  // ------------------------------ Header Drawer ------------------------------
   const drawHeader = () => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(17); // slightly smaller to save space
-    doc.setTextColor(8, 61, 166);
-    doc.text("SHRI KARISHNA HANDLOOM", pageWidth / 2, 13, { align: "center" });
+    // Top brand ribbon
+    setFill(doc, C.brand.base);
+    doc.rect(0, 0, pageW(), 18, "F");
 
+    // Company name on ribbon
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    setText(doc, [255, 255, 255]);
+    doc.text("SHRI KARISHNA HANDLOOM", pageW() / 2, 12, { align: "center" });
+
+    // Title line
+    setText(doc, C.ink[900]);
     doc.setFontSize(13);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Billing Report", pageWidth / 2, 21, { align: "center" });
-
-    doc.setFontSize(10.5);
-    doc.setFont("helvetica", "normal");
-    doc.text((dateRange || "").trim() || "All Time", pageWidth / 2, 28, { align: "center" });
-
-    // NEW: totals on two centered lines
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 160);
-    doc.text(`TOTAL SALES: ${fmtINR(grandTotalSales)}`, pageWidth / 2, 35, { align: "center" });
+    doc.text("Billing Report", pageW() / 2, 26, { align: "center" });
 
-    doc.setTextColor(0, 128, 0);
-    doc.text(`TOTAL PROFIT: ${fmtINR(grandTotalProfit)}`, pageWidth / 2, 41, { align: "center" });
+    // Date range
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10.5);
+    setText(doc, C.ink[700]);
+    doc.text((dateRange || "").trim() || "All Time", pageW() / 2, 33, { align: "center" });
 
-    // separator line a little lower now
-    doc.setDrawColor(0, 128, 0);
-    doc.setLineWidth(0.5);
-    doc.line(12, 44, pageWidth - 12, 44);
+    // Two stat “chips” (rounded cards)
+    drawChip(doc, {
+      x: marginSide, y: 38, w: 85, h: 12,
+      fill: [240, 252, 247], stroke: C.ok.base, textColor: C.ok.base,
+      label: "TOTAL SALES", value: fmtINR(grandTotalSales)
+    });
+    drawChip(doc, {
+      x: pageW() - marginSide - 85, y: 38, w: 85, h: 12,
+      fill: [243, 240, 255], stroke: C.info.base, textColor: C.info.base,
+      label: "TOTAL PROFIT", value: fmtINR(grandTotalProfit)
+    });
+
+    // subtle divider
+    setStroke(doc, C.grid.line); doc.setLineWidth(0.4);
+    doc.line(marginSide, 53, pageW() - marginSide, 53);
   };
 
-  // ----------------- BODY BUILD: main → items → total → spacer -----------------
+  // ------------------------- Build Table Body Rows --------------------------
   const body: any[] = [];
   let serial = 1;
 
@@ -131,7 +158,6 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
       customer: bill.customer?.name ?? bill.customerName ?? "",
       mobile: bill.customer?.mobile ?? "",
       items: "",
-      // PDF-safe currency
       cash:   isNum(bill.cashPayment)    ? fmtINR(bill.cashPayment)    : "",
       online: isNum(bill.onlinePayment)  ? fmtINR(bill.onlinePayment)  : "",
       borrow: isNum(bill.borrowedAmount) ? fmtINR(bill.borrowedAmount) : "",
@@ -149,7 +175,6 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
       body.push({
         _type: "item",
         ser: "", billNo: "", date: "", customer: "", mobile: "",
-        // Replace ₹ with 'Rs.' so glyph issue is gone
         items:
           `${item.product?.name || item.productName || "Item"} (Qty: ${qty}) - ` +
           `Purchase: ${fmtINR(unitCost)} - Sale: ${fmtINR(sale)} - ` +
@@ -184,7 +209,7 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
     body.push({ _type: "spacer", ser: "", billNo: "", date: "", customer: "", mobile: "", items: "", cash: "", online: "", borrow: "", seller: "", remarks: "" });
   });
 
-  // ----------------- COLUMNS & AUTOTABLE -----------------
+  // ------------------------------ Render AutoTable --------------------------
   const columns = [
     { header: headers[0], dataKey: "ser" },
     { header: headers[1], dataKey: "billNo" },
@@ -205,26 +230,27 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
     margin: { left: marginSide, right: marginSide, bottom: marginBottom },
     columns: columns as any,
     body: body as any,
-    // compact typography
     styles: {
       font: "helvetica",
-      fontSize: 8,
-      lineHeight: 1.05,
+      fontSize: 8.2,
+      lineHeight: 1.08,
       cellPadding: { top: 2, right: 2, bottom: 2, left: 2 },
       overflow: "linebreak",
       wordBreak: "break-word",
       lineWidth: 0.1,
-      lineColor: [180, 180, 180],
+      lineColor: C.grid.line as any,
       valign: "middle",
+      textColor: C.ink[900] as any,
     },
     headStyles: {
-      fillColor: [255, 215, 0],
+      fillColor: C.gold.base as any,    // rich golden header
       textColor: [0, 0, 0],
       fontStyle: "bold",
-      halign: "center"
+      halign: "center",
+      lineColor: C.grid.line as any,
+      lineWidth: 0.2,
     },
-    alternateRowStyles: { fillColor: [255, 255, 255] },
-    // auto-fit widths we computed above
+    alternateRowStyles: { fillColor: C.grid.light as any },
     columnStyles: {
       ser:    { cellWidth: colWidths.ser,    halign: "center" },
       billNo: { cellWidth: colWidths.billNo, halign: "center" },
@@ -234,8 +260,7 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
       items:    { cellWidth: colWidths.items },
       cash:     { cellWidth: colWidths.cash,   halign: "center" },
       online:   { cellWidth: colWidths.online, halign: "center" },
-      // Borrow center aligned
-      borrow:   { cellWidth: colWidths.borrow, halign: "center" },
+      borrow:   { cellWidth: colWidths.borrow, halign: "center" }, // centered
       seller:   { cellWidth: colWidths.seller },
       remarks:  { cellWidth: colWidths.remarks }
     },
@@ -246,13 +271,14 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
 
         if (raw?._type === "item") {
           if (key !== "items") hook.cell.text = [""];
-          else hook.cell.styles.textColor = [70, 70, 70];
+          else hook.cell.styles.textColor = C.ink[700] as any;
         }
         if (raw?._type === "total") {
-          if (key !== "items") hook.cell.text = [""];
-          else {
+          if (key !== "items") {
+            hook.cell.text = [""];
+          } else {
             hook.cell.styles.fontStyle = "bold";
-            hook.cell.styles.textColor = raw._profitPos ? [0, 128, 0] : [204, 0, 0];
+            hook.cell.styles.textColor = (raw._profitPos ? C.ok.base : C.err.base) as any;
           }
         }
         if (raw?._type === "spacer") {
@@ -262,45 +288,53 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
         }
       }
     },
-    didDrawPage: () => drawHeader()
+    didDrawPage: () => {
+      // sticky-looking header per page
+      drawHeader();
+      // footer bar
+      setStroke(doc, C.grid.line); setText(doc, C.ink[500]);
+      const y = pageH() - 8;
+      doc.setLineWidth(0.2); doc.line(marginSide, y, pageW() - marginSide, y);
+      doc.setFontSize(9);
+      doc.text(`Printed on ${new Date().toLocaleString("en-IN")}`, pageW() - marginSide, y + 6, { align: "right" });
+    }
   });
 
-  // Footer
+  // Page numbers
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
     doc.setFontSize(9);
-    doc.setTextColor(110);
-    const y = doc.internal.pageSize.getHeight() - 6;
-    doc.text(`Page ${i} of ${pages}`, 12, y);
-    doc.text(`Printed on ${new Date().toLocaleString("en-IN")}`, doc.internal.pageSize.getWidth() - 12, y, { align: "right" });
+    setText(doc, C.ink[500]);
+    doc.text(`Page ${i} of ${pages}`, marginSide, pageH() - 2);
   }
 
   doc.save("Billing Report.pdf");
 }
 
-
-/** ------------ 2) GENERIC TABLE (non-billing) ------------- */
+/* ------------------------- 2) GENERIC TABLE (others) ------------------------ */
 function exportGenericPDF({
   title, dateRange, columns, data, columnLabels, currencyColumns, mergeColumns, orientation, financialSummary
 }: any) {
   const doc = new jsPDF({ orientation: orientation || "landscape" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginTop = 44;
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginTop = 48;
 
   const drawHeader = () => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(8, 61, 166);
-    doc.text("Shree Krishna Handloom", pageWidth / 2, 14, { align: "center" });
+    // brand bar
+    setFill(doc, C.brand.base); doc.rect(0, 0, pageW, 18, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(16); setText(doc, [255,255,255]);
+    doc.text("Shree Krishna Handloom", pageW / 2, 12, { align: "center" });
 
-    doc.setFontSize(14); doc.setTextColor(0, 0, 0);
-    doc.text(title, pageWidth / 2, 22, { align: "center" });
+    setText(doc, C.ink[900]); doc.setFontSize(13);
+    doc.text(title, pageW / 2, 26, { align: "center" });
 
-    doc.setFontSize(11); doc.setFont("helvetica", "normal");
-    doc.text((dateRange || "").trim() || "All Time", pageWidth / 2, 30, { align: "center" });
+    setText(doc, C.ink[700]); doc.setFont("helvetica", "normal"); doc.setFontSize(10.5);
+    doc.text((dateRange || "").trim() || "All Time", pageW / 2, 33, { align: "center" });
 
-    doc.setDrawColor(200); doc.line(12, 34, pageWidth - 12, 34);
+    setStroke(doc, C.grid.line); doc.setLineWidth(0.4);
+    doc.line(12, 40, pageW - 12, 40);
   };
 
   const labels = (columnLabels?.length ? columnLabels : columns) as string[];
@@ -316,12 +350,17 @@ function exportGenericPDF({
 
   drawHeader();
   autoTable(doc, {
-    margin: { top: marginTop, left: 12, right: 12, bottom: 16 },
+    startY: marginTop,
+    margin: { left: 12, right: 12, bottom: 16 },
     columns: cols,
     body: rows,
-    styles: { font: "helvetica", fontSize: 9, cellPadding: 3, lineWidth: 0.1, lineColor: [200, 200, 200], overflow: "linebreak" },
-    headStyles: { fillColor: [8, 61, 166], textColor: 255, fontStyle: "bold", halign: "center" },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
+    styles: {
+      font: "helvetica", fontSize: 9, cellPadding: 3,
+      lineWidth: 0.1, lineColor: C.grid.line as any, overflow: "linebreak",
+      textColor: C.ink[900] as any
+    },
+    headStyles: { fillColor: C.brand.base as any, textColor: 255, fontStyle: "bold", halign: "center" },
+    alternateRowStyles: { fillColor: C.grid.light as any },
     columnStyles: Object.fromEntries((columns as string[]).map(k => [
       k, { halign: (currencyColumns || []).includes(k) ? "right" : "left" }
     ])),
@@ -345,17 +384,23 @@ function exportGenericPDF({
         })()],
       ],
       styles: { font: "helvetica", fontSize: 10 },
-      headStyles: { fillColor: [8, 61, 166], textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { fontStyle: "bold" }, 1: { halign: "right", textColor: [220, 38, 38], fontStyle: "bold" } },
+      headStyles: { fillColor: C.brand.base as any, textColor: 255, fontStyle: "bold" },
+      columnStyles: { 0: { fontStyle: "bold" }, 1: { halign: "right", textColor: C.err.base as any, fontStyle: "bold" } },
       didDrawPage: () => drawHeader()
     });
   }
 
+  // footer
+  setStroke(doc, C.grid.line); setText(doc, C.ink[500]);
+  doc.setLineWidth(0.2); doc.line(12, pageH - 8, pageW - 12, pageH - 8);
+  doc.setFontSize(9);
+  doc.text(`Printed on ${new Date().toLocaleString("en-IN")}`, pageW - 12, pageH - 2, { align: "right" });
+
   doc.save(`${title}.pdf`);
 }
 
-/** --------------- helpers --------------- */
-// PDF-safe Indian currency (₹ glyph ke bajay Rs.)
+/* --------------------------------- Helpers -------------------------------- */
+// Currency in PDF-safe form (₹ glyph can vary across viewers)
 const fmtINR = (n: number) =>
   `Rs. ${Number(n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -400,7 +445,6 @@ function toStringSafe(v: any) {
   return String(v);
 }
 
-// Grand totals for header
 function computeGrandTotals(data: any[]) {
   let grandTotalSales = 0;
   let grandTotalProfit = 0;
@@ -408,7 +452,6 @@ function computeGrandTotals(data: any[]) {
   for (const bill of (data || [])) {
     const items = Array.isArray(bill?.items) ? bill.items : [];
 
-    // Prefer bill.totalAmount; fallback: sum of salePrice * qty
     const saleFromItems = items.reduce((s: number, it: any) => {
       const qty  = Number(it?.quantity ?? 1);
       const sale = Number(it?.salePrice ?? 0);
@@ -417,7 +460,6 @@ function computeGrandTotals(data: any[]) {
     const totalSale = isNum(bill?.totalAmount) ? Number(bill.totalAmount) : saleFromItems;
     grandTotalSales += totalSale;
 
-    // Profit = (sale - unitCost) * qty
     const billProfit = items.reduce((s: number, it: any) => {
       const qty  = Number(it?.quantity ?? 1);
       const sale = Number(it?.salePrice ?? 0);
@@ -429,4 +471,20 @@ function computeGrandTotals(data: any[]) {
   }
 
   return { grandTotalSales, grandTotalProfit };
+}
+
+// pretty chip card
+function drawChip(
+  doc: jsPDF,
+  opts: { x: number; y: number; w: number; h: number; fill: number[]; stroke: number[]; textColor: number[]; label: string; value: string }
+) {
+  const { x, y, w, h, fill, stroke, textColor, label, value } = opts;
+  setFill(doc, fill); setStroke(doc, stroke);
+  doc.setLineWidth(0.5);
+  (doc as any).roundedRect(x, y, w, h, 2, 2, "FD");
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); setText(doc, textColor);
+  doc.text(label, x + 4, y + 4.6);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+  doc.text(value, x + w - 4, y + 4.6, { align: "right" });
 }
