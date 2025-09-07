@@ -107,7 +107,7 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     setText(doc, [255, 255, 255]);
-    doc.text("SHRI KARISHNA HANDLOOM", pageW() / 2, 12, { align: "center" });
+    doc.text("SHREE KARISHNA HANDLOOM", pageW() / 2, 12, { align: "center" });
 
     // title + date
     setText(doc, C.ink[900]); doc.setFontSize(13); doc.setFont("helvetica", "bold");
