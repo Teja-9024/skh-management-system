@@ -33,38 +33,35 @@ export function exportToPDF({
 }
 
 /* --------------------------------- THEME --------------------------------- */
-// Brand & UI colors (accessible contrast, professional palette)
 const C = {
   brand: { dk: [15, 76, 129], base: [26, 95, 180], lt: [232, 241, 250] },
   ink:   { 900: [22, 27, 34], 700: [68, 84, 106], 500: [110, 119, 129] },
   grid:  { line: [200, 208, 218], light: [244, 247, 251] },
   ok:    { base: [9, 132, 87] },
-  warn:  { base: [255, 159, 10] },
   err:   { base: [203, 50, 52] },
   info:  { base: [93, 63, 211] },
-  gold:  { base: [255, 203, 0] },   // table head like Excel but richer
+  gold:  { base: [255, 203, 0] },
 };
 
-// quick helpers
 const setFill = (doc: jsPDF, rgb: number[]) => doc.setFillColor(rgb[0], rgb[1], rgb[2]);
 const setStroke = (doc: jsPDF, rgb: number[]) => doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
 const setText = (doc: jsPDF, rgb: number[]) => doc.setTextColor(rgb[0], rgb[1], rgb[2]);
 
 /* -------------------------- 1) BILLING REPORT PDF ------------------------- */
 function exportBillingReportPDF(data: any[], dateRange: string) {
-  // choose page size dynamically (A4 by default; switch to A3 if too tight)
   let doc = new jsPDF({ orientation: "landscape", format: "a4" });
   const marginSide = 12;
-  let marginTop = 56; // we draw a rich header with chips, so start lower
+
+  // First page header height के हिसाब से table को नीचे से शुरू करेंगे:
+  const firstPageStartY = 56; // big header space on first page
+  const otherPagesTopMargin = 16; // smaller top margin for subsequent pages
   const marginBottom = 16;
 
-  // headers
   const headers = [
     "SER NO","Bill No","Date","NAME OF CUSTOMER","MOB NO OF CUSTOMER",
     "ITEMS","CASE PAYMENT","ONLINE PAYMENT","BORROW","Name of Seller","REMARKS"
   ];
 
-  // base widths we’ll auto-scale
   const baseWidths: Record<string, number> = {
     ser: 10, billNo: 16, date: 22, customer: 38, mobile: 28,
     items: 120, cash: 22, online: 24, borrow: 22, seller: 28, remarks: 26
@@ -99,34 +96,27 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
   };
   const colWidths = computeWidths();
 
-  // GRAND TOTALS (header chips)
   const { grandTotalSales, grandTotalProfit } = computeGrandTotals(data);
 
-  // ------------------------------ Header Drawer ------------------------------
-  const drawHeader = () => {
-    // Top brand ribbon
+  // ---------- draw header ONLY ON FIRST PAGE ----------
+  const drawHeaderOnce = () => {
+    // brand ribbon
     setFill(doc, C.brand.base);
     doc.rect(0, 0, pageW(), 18, "F");
 
-    // Company name on ribbon
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     setText(doc, [255, 255, 255]);
     doc.text("SHRI KARISHNA HANDLOOM", pageW() / 2, 12, { align: "center" });
 
-    // Title line
-    setText(doc, C.ink[900]);
-    doc.setFontSize(13);
-    doc.setFont("helvetica", "bold");
+    // title + date
+    setText(doc, C.ink[900]); doc.setFontSize(13); doc.setFont("helvetica", "bold");
     doc.text("Billing Report", pageW() / 2, 26, { align: "center" });
 
-    // Date range
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.5);
-    setText(doc, C.ink[700]);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); setText(doc, C.ink[700]);
     doc.text((dateRange || "").trim() || "All Time", pageW() / 2, 33, { align: "center" });
 
-    // Two stat “chips” (rounded cards)
+    // chips
     drawChip(doc, {
       x: marginSide, y: 38, w: 85, h: 12,
       fill: [240, 252, 247], stroke: C.ok.base, textColor: C.ok.base,
@@ -138,15 +128,14 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
       label: "TOTAL PROFIT", value: fmtINR(grandTotalProfit)
     });
 
-    // subtle divider
+    // divider
     setStroke(doc, C.grid.line); doc.setLineWidth(0.4);
     doc.line(marginSide, 53, pageW() - marginSide, 53);
   };
 
-  // ------------------------- Build Table Body Rows --------------------------
+  // Build rows
   const body: any[] = [];
   let serial = 1;
-
   (data || []).forEach((bill: any) => {
     const billItems = Array.isArray(bill?.items) ? bill.items : [];
 
@@ -209,7 +198,6 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
     body.push({ _type: "spacer", ser: "", billNo: "", date: "", customer: "", mobile: "", items: "", cash: "", online: "", borrow: "", seller: "", remarks: "" });
   });
 
-  // ------------------------------ Render AutoTable --------------------------
   const columns = [
     { header: headers[0], dataKey: "ser" },
     { header: headers[1], dataKey: "billNo" },
@@ -224,12 +212,17 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
     { header: headers[10], dataKey: "remarks" }
   ];
 
-  drawHeader();
+  // 👉 header ONLY FIRST PAGE
+  drawHeaderOnce();
+
   autoTable(doc, {
-    startY: marginTop,
-    margin: { left: marginSide, right: marginSide, bottom: marginBottom },
+    // first page starts after header
+    startY: firstPageStartY,
+    // subsequent pages will use this top margin (smaller)
+    margin: { top: otherPagesTopMargin, left: marginSide, right: marginSide, bottom: marginBottom },
     columns: columns as any,
     body: body as any,
+    showHead: 'firstPage',
     styles: {
       font: "helvetica",
       fontSize: 8.2,
@@ -243,7 +236,7 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
       textColor: C.ink[900] as any,
     },
     headStyles: {
-      fillColor: C.gold.base as any,    // rich golden header
+      fillColor: C.gold.base as any,
       textColor: [0, 0, 0],
       fontStyle: "bold",
       halign: "center",
@@ -260,7 +253,7 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
       items:    { cellWidth: colWidths.items },
       cash:     { cellWidth: colWidths.cash,   halign: "center" },
       online:   { cellWidth: colWidths.online, halign: "center" },
-      borrow:   { cellWidth: colWidths.borrow, halign: "center" }, // centered
+      borrow:   { cellWidth: colWidths.borrow, halign: "center" },
       seller:   { cellWidth: colWidths.seller },
       remarks:  { cellWidth: colWidths.remarks }
     },
@@ -288,26 +281,21 @@ function exportBillingReportPDF(data: any[], dateRange: string) {
         }
       }
     },
-    didDrawPage: () => {
-      // sticky-looking header per page
-      drawHeader();
-      // footer bar
+    // 👉 draw footer on every page, but DO NOT draw header again
+    didDrawPage: (data) => {
+      // footer line
       setStroke(doc, C.grid.line); setText(doc, C.ink[500]);
-      const y = pageH() - 8;
-      doc.setLineWidth(0.2); doc.line(marginSide, y, pageW() - marginSide, y);
+      const y = doc.internal.pageSize.getHeight() - 8;
+      doc.setLineWidth(0.2);
+      doc.line(marginSide, y, doc.internal.pageSize.getWidth() - marginSide, y);
+
+      // page numbers + printed on
+      const pageCount = doc.getNumberOfPages();
       doc.setFontSize(9);
-      doc.text(`Printed on ${new Date().toLocaleString("en-IN")}`, pageW() - marginSide, y + 6, { align: "right" });
+      doc.text(`Page ${data.pageNumber} of ${pageCount}`, marginSide, y + 6);
+      doc.text(`Printed on ${new Date().toLocaleString("en-IN")}`, doc.internal.pageSize.getWidth() - marginSide, y + 6, { align: "right" });
     }
   });
-
-  // Page numbers
-  const pages = doc.getNumberOfPages();
-  for (let i = 1; i <= pages; i++) {
-    doc.setPage(i);
-    doc.setFontSize(9);
-    setText(doc, C.ink[500]);
-    doc.text(`Page ${i} of ${pages}`, marginSide, pageH() - 2);
-  }
 
   doc.save("Billing Report.pdf");
 }
@@ -319,15 +307,16 @@ function exportGenericPDF({
   const doc = new jsPDF({ orientation: orientation || "landscape" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const marginTop = 48;
 
-  const drawHeader = () => {
-    // brand bar
+  const firstPageStartY = 48;      // header spacer first page
+  const otherPagesTopMargin = 16;  // smaller top margin later
+
+  const drawHeaderOnce = () => {
     setFill(doc, C.brand.base); doc.rect(0, 0, pageW, 18, "F");
     doc.setFont("helvetica", "bold"); doc.setFontSize(16); setText(doc, [255,255,255]);
     doc.text("Shree Krishna Handloom", pageW / 2, 12, { align: "center" });
 
-    setText(doc, C.ink[900]); doc.setFontSize(13);
+    setText(doc, C.ink[900]); doc.setFontSize(13); doc.setFont("helvetica", "bold");
     doc.text(title, pageW / 2, 26, { align: "center" });
 
     setText(doc, C.ink[700]); doc.setFont("helvetica", "normal"); doc.setFontSize(10.5);
@@ -348,10 +337,12 @@ function exportGenericPDF({
     return obj;
   });
 
-  drawHeader();
+  // 👉 header ONLY FIRST PAGE
+  drawHeaderOnce();
+
   autoTable(doc, {
-    startY: marginTop,
-    margin: { left: 12, right: 12, bottom: 16 },
+    startY: firstPageStartY,
+    margin: { top: otherPagesTopMargin, left: 12, right: 12, bottom: 16 },
     columns: cols,
     body: rows,
     styles: {
@@ -364,12 +355,21 @@ function exportGenericPDF({
     columnStyles: Object.fromEntries((columns as string[]).map(k => [
       k, { halign: (currencyColumns || []).includes(k) ? "right" : "left" }
     ])),
-    didDrawPage: () => drawHeader()
+    // footer per page; NO header redraw
+    didDrawPage: (data) => {
+      setStroke(doc, C.grid.line); setText(doc, C.ink[500]);
+      const y = pageH - 8;
+      doc.setLineWidth(0.2); doc.line(12, y, pageW - 12, y);
+      const pageCount = doc.getNumberOfPages();
+      doc.setFontSize(9);
+      doc.text(`Page ${data.pageNumber} of ${pageCount}`, 12, y + 6);
+      doc.text(`Printed on ${new Date().toLocaleString("en-IN")}`, pageW - 12, y + 6, { align: "right" });
+    }
   });
 
-  // Optional financial summary
+  // Optional financial summary (still fine—prints after the table)
   if (title === "Financial Summary" && financialSummary) {
-    const lastY = (doc as any).lastAutoTable.finalY || marginTop;
+    const lastY = (doc as any).lastAutoTable.finalY || firstPageStartY;
     autoTable(doc, {
       startY: lastY + 10,
       head: [["Financial Summary", "Value"]],
@@ -386,21 +386,13 @@ function exportGenericPDF({
       styles: { font: "helvetica", fontSize: 10 },
       headStyles: { fillColor: C.brand.base as any, textColor: 255, fontStyle: "bold" },
       columnStyles: { 0: { fontStyle: "bold" }, 1: { halign: "right", textColor: C.err.base as any, fontStyle: "bold" } },
-      didDrawPage: () => drawHeader()
     });
   }
-
-  // footer
-  setStroke(doc, C.grid.line); setText(doc, C.ink[500]);
-  doc.setLineWidth(0.2); doc.line(12, pageH - 8, pageW - 12, pageH - 8);
-  doc.setFontSize(9);
-  doc.text(`Printed on ${new Date().toLocaleString("en-IN")}`, pageW - 12, pageH - 2, { align: "right" });
 
   doc.save(`${title}.pdf`);
 }
 
 /* --------------------------------- Helpers -------------------------------- */
-// Currency in PDF-safe form (₹ glyph can vary across viewers)
 const fmtINR = (n: number) =>
   `Rs. ${Number(n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -473,7 +465,6 @@ function computeGrandTotals(data: any[]) {
   return { grandTotalSales, grandTotalProfit };
 }
 
-// pretty chip card
 function drawChip(
   doc: jsPDF,
   opts: { x: number; y: number; w: number; h: number; fill: number[]; stroke: number[]; textColor: number[]; label: string; value: string }

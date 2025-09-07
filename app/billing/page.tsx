@@ -421,7 +421,9 @@ export default function BillingSystem() {
                 />
                 <div className="mt-1 text-xs">
                   {!currentItem.purchaseCode ? null : decodedInfo.valid ? (
-                    <span className="text-green-600"> Decoded: ₹{decodedInfo.value} </span>
+                    <span className="text-green-600">
+                     {/* Decoded: ₹{decodedInfo.value}  */}
+                     </span>
                   ) : (
                     <span className="text-red-500">Invalid code</span>
                   )}
