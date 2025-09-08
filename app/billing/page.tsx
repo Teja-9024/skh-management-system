@@ -54,14 +54,16 @@ const BillSchema = z.object({
   billNumber: z.string()
     .min(1, "Bill number is required")
     .refine((v) => /^\d+$/.test(v), "Bill number must be numeric"),
-  date: z.string().min(1, "Date is required"), // UI sends yyyy-mm-dd
+  date: z.string().min(1, "Date is required"),
   sellerName: z.string().optional().default(""),
   customerName: z.string().min(1, "Customer name is required"),
+  // OPTIONAL mobile; if provided, must be exactly 10 digits
   customerMobile: z.string().optional().refine(
-    (v) => !v || /^[0-9+\-\s]{7,15}$/.test(v),
-    "Invalid mobile number"
+    (v) => !v || /^\d{10}$/.test(v),
+    "Mobile must be exactly 10 digits"
   ),
   items: z.array(BillItemSchema).min(1, "Add at least one item"),
+  // Payment fields can be left as default zero
   savingBalance: z.number().min(0, "Saving balance can't be negative"),
   cashPayment: z.number().min(0, "Cash payment can't be negative"),
   onlinePayment: z.number().min(0, "Online payment can't be negative"),
@@ -74,6 +76,10 @@ const BillSchema = z.object({
  *  ------------------------- */
 type BillItem = z.infer<typeof BillItemSchema>
 type BillData = z.infer<typeof BillSchema>
+
+// sanitize helpers
+const toNumber = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0)
+const onlyDigits = (s: string) => s.replace(/\D+/g, "").slice(0, 10)
 
 export default function BillingSystem() {
   const [formData, setFormData] = useState<BillData>({
@@ -102,15 +108,17 @@ export default function BillingSystem() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingBillId, setEditingBillId] = useState<string | null>(null)
 
-  const { data: billsData, loading: billsLoading, execute: fetchBills } = useApi()
+  const { loading: billsLoading, execute: fetchBills } = useApi()
   const { mutate: createBill } = useApiMutation()
   const { mutate: mutateBill } = useApiMutation()
   const { mutate: deleteBillMutation } = useApiMutation()
 
   useEffect(() => {
     loadBills()
-    generateNextBillNumber()
-  }, [])
+    if (!editingBillId) {
+      generateNextBillNumber()
+    }
+  }, [editingBillId])
 
   const loadBills = async () => {
     try {
@@ -125,15 +133,13 @@ export default function BillingSystem() {
 
   const generateNextBillNumber = async () => {
     try {
-      const data = await fetchBills("/api/bills?limit=1")
-      const lastBill = data.bills?.[0]
-      if (lastBill) {
-        const nextNumber = (parseInt(lastBill.billNumber) + 1).toString()
-        setFormData((prev) => ({ ...prev, billNumber: nextNumber }))
+      // Your API should return { nextBillNumber: "123" } for this query param
+      const data = await fetchBills("/api/bills?nextBillNumber=true")
+      if (data?.nextBillNumber) {
+        setFormData((prev) => ({ ...prev, billNumber: String(data.nextBillNumber) }))
       }
     } catch (error) {
       console.error("Failed to generate bill number:", error)
-      // not critical, so no toast
     }
   }
 
@@ -141,12 +147,10 @@ export default function BillingSystem() {
    *  Helpers
    *  ------------------------- */
   const fmt = (n: number) => `₹${Number(n || 0).toFixed(2)}`
-  const numberOrZero = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0)
-
   const updateCurrentItem = (field: keyof BillItem, value: any) => {
     const updated = { ...currentItem, [field]: value }
     if (field === "quantity" || field === "salePrice") {
-      updated.total = numberOrZero(updated.quantity) * numberOrZero(updated.salePrice)
+      updated.total = toNumber(updated.quantity) * toNumber(updated.salePrice)
     }
     setCurrentItem(updated)
   }
@@ -166,12 +170,10 @@ export default function BillingSystem() {
       showZodErrors(parsed.error)
       return
     }
-
     setFormData((prev) => ({
       ...prev,
       items: [...prev.items, { ...parsed.data }],
     }))
-
     toast.success("Item added")
     setCurrentItem({
       productName: "",
@@ -202,8 +204,8 @@ export default function BillingSystem() {
       customerName: bill.customer?.name || bill.customerName || "",
       customerMobile: bill.customer?.mobile || bill.customerMobile || "",
       items: (bill.items || []).map((it: any) => {
-        const qty = numberOrZero(it.quantity)
-        const price = numberOrZero(it.salePrice)
+        const qty = toNumber(it.quantity)
+        const price = toNumber(it.salePrice)
         return {
           productName: it.product?.name || it.productName || "",
           quantity: qty,
@@ -212,13 +214,31 @@ export default function BillingSystem() {
           total: qty * price,
         }
       }),
-      savingBalance: numberOrZero(bill.savingBalance),
-      cashPayment: numberOrZero(bill.cashPayment),
-      onlinePayment: numberOrZero(bill.onlinePayment),
-      borrowedAmount: numberOrZero(bill.borrowedAmount),
+      savingBalance: toNumber(bill.savingBalance),
+      cashPayment: toNumber(bill.cashPayment),
+      onlinePayment: toNumber(bill.onlinePayment),
+      borrowedAmount: toNumber(bill.borrowedAmount),
       remarks: bill.remarks || "",
     })
     window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const cancelEdit = async () => {
+    setEditingBillId(null)
+    setFormData({
+      billNumber: "1",
+      date: new Date().toISOString().split("T")[0],
+      sellerName: "",
+      customerName: "",
+      customerMobile: "",
+      items: [],
+      savingBalance: 0,
+      cashPayment: 0,
+      onlinePayment: 0,
+      borrowedAmount: 0,
+      remarks: "",
+    })
+    await generateNextBillNumber()
   }
 
   const deleteBill = async (billId: string) => {
@@ -238,7 +258,6 @@ export default function BillingSystem() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate bill payload
     const parseResult = BillSchema.safeParse(formData)
     if (!parseResult.success) {
       showZodErrors(parseResult.error)
@@ -253,7 +272,7 @@ export default function BillingSystem() {
         date: valid.date,
         customer: {
           name: valid.customerName,
-          mobile: valid.customerMobile,
+          mobile: valid.customerMobile, // may be empty
         },
         sellerName: valid.sellerName,
         items: valid.items.map((item) => ({
@@ -262,13 +281,14 @@ export default function BillingSystem() {
           salePrice: item.salePrice,
           purchaseCode: item.purchaseCode,
         })),
+        // Payment fields: allowed to be zero
         savingBalance: valid.savingBalance,
         cashPayment: valid.cashPayment,
         onlinePayment: valid.onlinePayment,
         borrowedAmount: valid.borrowedAmount,
-        remarks: valid.remarks,
+        remarks: valid.remarks?.trim() ? valid.remarks.trim() : undefined,
       }
-
+      
       if (editingBillId) {
         await mutateBill(`/api/bills/${editingBillId}`, { method: "PUT", body: billPayload })
         toast.success("Bill updated")
@@ -277,20 +297,37 @@ export default function BillingSystem() {
         toast.success("Bill saved")
       }
 
-      // reset
-      setFormData({
-        billNumber: editingBillId ? valid.billNumber : (Number.parseInt(valid.billNumber) + 1).toString(),
-        date: new Date().toISOString().split("T")[0],
-        sellerName: "",
-        customerName: "",
-        customerMobile: "",
-        items: [],
-        savingBalance: 0,
-        cashPayment: 0,
-        onlinePayment: 0,
-        borrowedAmount: 0,
-        remarks: "",
-      })
+      // reset form
+      if (editingBillId) {
+        setFormData({
+          billNumber: valid.billNumber, // keep same number on edit
+          date: new Date().toISOString().split("T")[0],
+          sellerName: "",
+          customerName: "",
+          customerMobile: "",
+          items: [],
+          savingBalance: 0,
+          cashPayment: 0,
+          onlinePayment: 0,
+          borrowedAmount: 0,
+          remarks: "",
+        })
+      } else {
+        const nextBillData = await fetchBills("/api/bills?nextBillNumber=true")
+        setFormData({
+          billNumber: nextBillData?.nextBillNumber || "1",
+          date: new Date().toISOString().split("T")[0],
+          sellerName: "",
+          customerName: "",
+          customerMobile: "",
+          items: [],
+          savingBalance: 0,
+          cashPayment: 0,
+          onlinePayment: 0,
+          borrowedAmount: 0,
+          remarks: "",
+        })
+      }
       setEditingBillId(null)
       await loadBills()
     } catch (error: any) {
@@ -306,8 +343,17 @@ export default function BillingSystem() {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Billing System</h2>
-        <p className="text-gray-600">Create and manage customer bills</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
+          {editingBillId ? "Edit Bill" : "Billing System"}
+        </h2>
+        <p className="text-gray-600">
+          {editingBillId ? "Update existing bill details" : "Create and manage customer bills"}
+        </p>
+        {editingBillId && (
+          <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            ✏️ Editing Bill #{formData.billNumber}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg card-shadow p-4 sm:p-6">
@@ -319,10 +365,10 @@ export default function BillingSystem() {
               <input
                 type="text"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
                 value={formData.billNumber}
-                onChange={(e) => setFormData((prev) => ({ ...prev, billNumber: e.target.value }))}
-                placeholder="1"
+                disabled // ALWAYS disabled
+                readOnly
               />
             </div>
             <div>
@@ -361,14 +407,22 @@ export default function BillingSystem() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Customer Mobile</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Customer Mobile (optional)</label>
               <input
                 type="tel"
+                inputMode="numeric"
+                pattern="\d{10}"
+                maxLength={10}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-                value={formData.customerMobile}
-                onChange={(e) => setFormData((prev) => ({ ...prev, customerMobile: e.target.value }))}
-                placeholder="Enter mobile number"
+                value={formData.customerMobile || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, customerMobile: onlyDigits(e.target.value) }))
+                }
+                placeholder="10 digit mobile (optional)"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Only digits allowed, exactly 10 if filled.
+              </p>
             </div>
           </div>
 
@@ -421,9 +475,7 @@ export default function BillingSystem() {
                 />
                 <div className="mt-1 text-xs">
                   {!currentItem.purchaseCode ? null : decodedInfo.valid ? (
-                    <span className="text-green-600">
-                     {/* Decoded: ₹{decodedInfo.value}  */}
-                     </span>
+                    <span className="text-green-600"></span>
                   ) : (
                     <span className="text-red-500">Invalid code</span>
                   )}
@@ -488,7 +540,7 @@ export default function BillingSystem() {
 
           {/* Payments */}
           <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Payment Details</h3>
+            <h3 className="text-lg font-semibold mb-4">Payment Details (optional)</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <NumberInput
                 label="Saving Balance"
@@ -530,7 +582,16 @@ export default function BillingSystem() {
               <span>Total Amount:</span>
               <span className="text-blue-600 mt-2 sm:mt-0">₹{totalAmount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
+              {editingBillId && (
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="px-6 sm:px-8 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 font-medium"
+                >
+                  Cancel
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -543,7 +604,7 @@ export default function BillingSystem() {
         </form>
       </div>
 
-      {/* Recent Bills + Exports (unchanged except toasts) */}
+      {/* Recent Bills + Exports */}
       <RecentBillsSection
         bills={bills}
         billsLoading={billsLoading}
@@ -572,7 +633,7 @@ function NumberInput({
       <input
         type="number"
         className="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-        value={value || ""}
+        value={value || 0}
         onChange={(e) => onChange(Number.parseFloat(e.target.value) || 0)}
         placeholder="0"
         step="0.01"
@@ -583,7 +644,7 @@ function NumberInput({
 }
 
 /** -------------------------
- *  Recent Bills Section (same UI; uses toasts in parent)
+ *  Recent Bills Section
  *  ------------------------- */
 function RecentBillsSection({
   bills,

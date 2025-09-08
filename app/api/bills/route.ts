@@ -16,6 +16,31 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
     const fromDate = searchParams.get('fromDate')
     const toDate = searchParams.get('toDate')
+    const getNextBillNumber = searchParams.get('nextBillNumber') === 'true'
+
+    // Special endpoint to get next bill number
+    if (getNextBillNumber) {
+      const nextBillNumber = await handleDatabaseOperation(async () => {
+        const lastBill = await prisma.bill.findFirst({
+          orderBy: {
+            billNumber: 'desc'
+          },
+          select: {
+            billNumber: true
+          }
+        })
+
+        if (!lastBill) {
+          return '1'
+        }
+
+        // Convert billNumber to integer and increment
+        const lastBillNum = parseInt(lastBill.billNumber) || 0
+        return (lastBillNum + 1).toString()
+      })
+
+      return NextResponse.json({ nextBillNumber })
+    }
 
     const skip = (page - 1) * limit
 
