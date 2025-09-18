@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
       const [expenses, total] = await Promise.all([
         prisma.expense.findMany({
           where,
-          skip,
-          take: limit,
+          // skip,
+          // take: limit,
           orderBy: { date: 'desc' },
         }),
         prisma.expense.count({ where }),

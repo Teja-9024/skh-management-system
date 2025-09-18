@@ -59,7 +59,7 @@ export default function ShopExpenses() {
 
   const loadExpenses = async () => {
     try {
-      const data = await fetchExpenses('/api/expenses?limit=10')
+      const data = await fetchExpenses('/api/expenses?limit=1000&sortBy=date')
       setExpenses(data.expenses || [])
     } catch (error) {
       console.error('Failed to load expenses:', error)
